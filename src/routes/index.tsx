@@ -180,30 +180,45 @@ function HomePage() {
             }}
           />
 
-          {/* Active spotlight on a specific operator (right-of-center) */}
-          <div
-            className={`pointer-events-none absolute top-[18%] h-[78%] w-[28%] rounded-full transition-opacity duration-700 ${
-              activeId ? "opacity-100 animate-breath" : "opacity-0"
-            }`}
-            style={{
-              left: "58%",
-              transform: "translateX(-50%)",
-              background:
-                "radial-gradient(ellipse, oklch(0.92 0.24 180 / 0.65) 0%, oklch(0.85 0.22 160 / 0.35) 35%, oklch(0.75 0.20 210 / 0.18) 60%, transparent 80%)",
-              filter: "blur(22px)",
-              mixBlendMode: "screen",
-            }}
-          />
-          {/* Dim the rest when one operator is highlighted */}
+          {/* Heavy dim layer for everyone except the nearest (rightmost) operator */}
           <div
             className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
               activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
               background:
-                "radial-gradient(ellipse 28% 78% at 58% 55%, transparent 0%, transparent 50%, oklch(0.08 0.03 252 / 0.55) 100%)",
+                "radial-gradient(ellipse 32% 95% at 88% 60%, transparent 0%, transparent 35%, oklch(0.06 0.03 252 / 0.72) 90%)",
             }}
           />
+
+          {/* Bright neon spotlight (cyan + green) on the nearest operator */}
+          <div
+            className={`pointer-events-none absolute top-[5%] h-[95%] w-[36%] rounded-full transition-opacity duration-700 ${
+              activeId ? "opacity-100 animate-breath" : "opacity-0"
+            }`}
+            style={{
+              right: "-4%",
+              background:
+                "radial-gradient(ellipse 60% 70% at 50% 50%, oklch(0.95 0.26 175 / 0.85) 0%, oklch(0.88 0.28 150 / 0.55) 30%, oklch(0.78 0.22 200 / 0.30) 55%, transparent 80%)",
+              filter: "blur(26px)",
+              mixBlendMode: "screen",
+            }}
+          />
+
+          {/* Secondary bright green rim accent */}
+          <div
+            className={`pointer-events-none absolute top-[20%] h-[70%] w-[22%] rounded-full transition-opacity duration-1000 ${
+              activeId ? "opacity-90" : "opacity-0"
+            }`}
+            style={{
+              right: "2%",
+              background:
+                "radial-gradient(ellipse, oklch(0.92 0.30 145 / 0.55) 0%, transparent 70%)",
+              filter: "blur(40px)",
+              mixBlendMode: "screen",
+            }}
+          />
+
 
 
           {/* Top neon ceiling strip */}
