@@ -161,13 +161,13 @@ function HomePage() {
               height: "92%",
               borderRadius: "50%",
               backdropFilter:
-                "brightness(1.55) contrast(1.18) saturate(1.45)",
+                "brightness(1.95) contrast(1.28) saturate(1.7)",
               WebkitBackdropFilter:
-                "brightness(1.55) contrast(1.18) saturate(1.45)",
+                "brightness(1.95) contrast(1.28) saturate(1.7)",
               maskImage:
-                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 40%, transparent 78%)",
+                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 45%, transparent 80%)",
               WebkitMaskImage:
-                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 40%, transparent 78%)",
+                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 45%, transparent 80%)",
             }}
           />
 
@@ -208,27 +208,28 @@ function HomePage() {
               activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
             style={{
-              left: "37%",
-              top: "40%",
-              width: "26%",
-              maxWidth: "320px",
-              perspective: "900px",
+              right: "6%",
+              top: "44%",
+              width: "30%",
+              maxWidth: "360px",
+              aspectRatio: "16 / 10",
+              perspective: "1000px",
             }}
           >
             {/* Monitor body */}
             <div
-              className="relative rounded-[10px] p-[6px]"
+              className="relative h-full w-full rounded-[10px] p-[5px]"
               style={{
                 background:
                   "linear-gradient(160deg, #2a2f38 0%, #15181d 55%, #0a0c10 100%)",
                 boxShadow:
-                  "0 18px 40px rgba(0,0,0,0.55), 0 0 60px oklch(0.92 0.28 170 / 0.55), 0 0 120px oklch(0.85 0.26 195 / 0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
-                transform: "rotateY(-6deg) rotateX(2deg)",
+                  "0 18px 40px rgba(0,0,0,0.55), 0 0 80px oklch(0.92 0.30 170 / 0.7), 0 0 140px oklch(0.85 0.28 195 / 0.4), inset 0 1px 0 rgba(255,255,255,0.06)",
+                transform: "rotateY(-10deg) rotateX(3deg)",
               }}
             >
               {/* Screen */}
               <div
-                className="relative overflow-hidden rounded-[5px] animate-screen-flicker"
+                className="relative h-full w-full overflow-hidden rounded-[5px] animate-screen-flicker"
                 style={{
                   background:
                     "linear-gradient(135deg, #04140f 0%, #06221a 60%, #03100c 100%)",
