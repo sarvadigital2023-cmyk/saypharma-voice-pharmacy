@@ -43,8 +43,11 @@ function HomePage() {
     <div className="relative min-h-screen overflow-hidden">
       {/* Ambient backdrop */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-x-0 top-0 h-[60vh] bg-[radial-gradient(ellipse_at_top,oklch(0.30_0.08_240/0.4),transparent_70%)]" />
+        <div className="absolute inset-x-0 top-0 h-[60vh] bg-[radial-gradient(ellipse_at_top,oklch(0.35_0.12_210/0.45),transparent_70%)]" />
+        <div className="absolute -left-1/4 top-1/3 h-[50vh] w-[70vw] aurora animate-aurora opacity-70" />
+        <div className="absolute -right-1/4 top-1/2 h-[45vh] w-[60vw] aurora animate-aurora opacity-60" style={{ animationDelay: "-6s" }} />
         <div className="absolute inset-0 floor-grid opacity-60" />
+        <div className="absolute inset-0 scanlines opacity-50 mix-blend-overlay" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
       </div>
 
