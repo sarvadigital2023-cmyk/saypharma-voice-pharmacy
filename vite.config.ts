@@ -12,4 +12,11 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  // Force-enable Nitro and hard-pin the Vercel preset so deploys from this repo's
+  // own CI (Vercel reading the GitHub repo) produce a proper SSR build under
+  // `.vercel/output` (Build Output API). Without this, builds outside Lovable
+  // skip Nitro and emit a Vite-only bundle with no SSR server / index.html, which
+  // Vercel serves as a 404. Inside Lovable the preset is forced to Cloudflare, so
+  // this override only affects external deploys.
+  nitro: { preset: "vercel" },
 });
