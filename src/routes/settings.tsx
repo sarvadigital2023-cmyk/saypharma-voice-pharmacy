@@ -219,9 +219,9 @@ function SettingsPage() {
           <div className="divide-y divide-border/60">
             {(
               [
-                { id: "how", label: "Как работает SayPharma", Icon: Pill },
-                { id: "privacy", label: "Политика конфиденциальности", Icon: Lock },
-                { id: "terms", label: "Условия использования", Icon: FileText },
+                { id: "how", label: "Как работает SayPharma", Icon: Pill, danger: false },
+                { id: "privacy", label: "Политика конфиденциальности", Icon: Lock, danger: false },
+                { id: "terms", label: "Условия использования", Icon: FileText, danger: false },
                 { id: "warning", label: "Важное предупреждение", Icon: ShieldAlert, danger: true },
               ] as const
             ).map(({ id, label, Icon, danger }) => (
