@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill } from "lucide-react";
+import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill, Settings } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { LiveMonitor } from "@/components/operator-scene";
 import callCenterBg from "@/assets/call-center-bg.jpg";
 
@@ -90,9 +91,18 @@ function HomePage() {
           <a href="#trust" className="hover:text-foreground transition">Безопасность</a>
           <a href="#contact" className="hover:text-foreground transition">Контакты</a>
         </nav>
-        <button className="rounded-full border border-border bg-card/60 px-4 py-2 text-xs font-medium backdrop-blur-md hover:border-primary/50 transition">
-          Войти
-        </button>
+        <div className="flex items-center gap-2">
+          <button className="rounded-full border border-border bg-card/60 px-4 py-2 text-xs font-medium backdrop-blur-md hover:border-primary/50 transition">
+            Войти
+          </button>
+          <Link
+            to="/settings"
+            aria-label="Настройки"
+            className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card/60 text-muted-foreground backdrop-blur-md transition hover:border-primary/50 hover:text-foreground hover:rotate-45"
+          >
+            <Settings className="h-4 w-4" />
+          </Link>
+        </div>
       </header>
 
       {/* CALL-CENTER STAGE */}
