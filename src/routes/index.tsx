@@ -202,51 +202,88 @@ function HomePage() {
             }}
           />
 
-          {/* Her glowing monitor with running status text */}
+          {/* Her glowing realistic monitor with running status text */}
           <div
             className={`pointer-events-none absolute transition-all duration-500 ${
               activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
             style={{
-              left: "36%",
-              top: "42%",
-              width: "28%",
-              maxWidth: "340px",
+              left: "37%",
+              top: "40%",
+              width: "26%",
+              maxWidth: "320px",
+              perspective: "900px",
             }}
           >
+            {/* Monitor body */}
             <div
-              className="relative rounded-lg border p-3 backdrop-blur-sm animate-screen-flicker"
+              className="relative rounded-[10px] p-[6px]"
               style={{
-                borderColor: "oklch(0.92 0.30 165 / 0.85)",
                 background:
-                  "linear-gradient(135deg, oklch(0.22 0.14 175 / 0.92), oklch(0.20 0.16 150 / 0.92))",
+                  "linear-gradient(160deg, #2a2f38 0%, #15181d 55%, #0a0c10 100%)",
                 boxShadow:
-                  "0 0 40px oklch(0.95 0.32 165 / 0.85), 0 0 80px oklch(0.85 0.28 175 / 0.6), inset 0 0 24px oklch(0.97 0.30 160 / 0.35)",
+                  "0 18px 40px rgba(0,0,0,0.55), 0 0 60px oklch(0.92 0.28 170 / 0.55), 0 0 120px oklch(0.85 0.26 195 / 0.35), inset 0 1px 0 rgba(255,255,255,0.06)",
+                transform: "rotateY(-6deg) rotateX(2deg)",
               }}
             >
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.95_0.30_30)] animate-breath" />
-                <span className="font-mono text-[8px] uppercase tracking-widest text-[oklch(0.97_0.25_165)]">
-                  saypharma · live
-                </span>
-              </div>
-              <div className="font-mono text-[10px] leading-relaxed text-[oklch(0.98_0.22_160)] min-h-[28px]">
-                <span className="text-[oklch(0.80_0.20_165)]">&gt; </span>
-                {STAGE_LINES[stageIdx]}
-                <span className="animate-caret">▌</span>
-              </div>
-              <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-[oklch(0.30_0.08_180/0.5)]">
+              {/* Screen */}
+              <div
+                className="relative overflow-hidden rounded-[5px] animate-screen-flicker"
+                style={{
+                  background:
+                    "linear-gradient(135deg, #04140f 0%, #06221a 60%, #03100c 100%)",
+                  boxShadow:
+                    "inset 0 0 30px oklch(0.95 0.30 165 / 0.45), inset 0 0 60px oklch(0.85 0.28 200 / 0.25)",
+                }}
+              >
+                {/* Scanlines on screen */}
+                <div className="absolute inset-0 scanlines opacity-40 mix-blend-overlay" />
+                {/* Glare */}
                 <div
-                  className="h-full transition-all duration-700"
+                  className="pointer-events-none absolute inset-0"
                   style={{
-                    width: `${((stageIdx + 1) / STAGE_LINES.length) * 100}%`,
                     background:
-                      "linear-gradient(to right, oklch(0.95 0.32 165), oklch(0.88 0.26 200))",
-                    boxShadow: "0 0 10px oklch(0.95 0.32 165)",
+                      "linear-gradient(115deg, rgba(255,255,255,0.10) 0%, transparent 40%, transparent 70%, rgba(255,255,255,0.04) 100%)",
                   }}
                 />
+                <div className="relative p-3">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.95_0.30_30)] animate-breath" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.92_0.22_90)]" />
+                    <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.92_0.25_150)]" />
+                    <span className="ml-1 font-mono text-[7px] uppercase tracking-[0.25em] text-[oklch(0.85_0.18_165)]">
+                      saypharma · console
+                    </span>
+                  </div>
+                  <div className="font-mono text-[10px] leading-relaxed text-[oklch(0.96_0.22_160)] min-h-[40px]">
+                    <div className="opacity-50 text-[8px]">$ saypharma --listen</div>
+                    <div className="mt-1">
+                      <span className="text-[oklch(0.80_0.20_165)]">&gt; </span>
+                      {STAGE_LINES[stageIdx]}
+                      <span className="animate-caret">▌</span>
+                    </div>
+                  </div>
+                  <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-[oklch(0.30_0.08_180/0.4)]">
+                    <div
+                      className="h-full transition-all duration-700"
+                      style={{
+                        width: `${((stageIdx + 1) / STAGE_LINES.length) * 100}%`,
+                        background:
+                          "linear-gradient(to right, oklch(0.95 0.32 165), oklch(0.88 0.26 200))",
+                        boxShadow: "0 0 10px oklch(0.95 0.32 165)",
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Bezel chin with brand dot */}
+              <div className="flex items-center justify-center pt-1 pb-0.5">
+                <span className="h-1 w-1 rounded-full bg-[oklch(0.85_0.18_165)] shadow-[0_0_6px_oklch(0.85_0.18_165)]" />
               </div>
             </div>
+            {/* Stand */}
+            <div className="mx-auto mt-0.5 h-2 w-[18%] bg-gradient-to-b from-[#1a1d22] to-[#0a0c10] rounded-b-sm" />
+            <div className="mx-auto h-1 w-[40%] bg-gradient-to-b from-[#15181d] to-[#05060a] rounded-sm" />
           </div>
 
           {/* Top neon ceiling strip */}
