@@ -219,7 +219,7 @@ export function Operator({ id, active, x, scale, delay = 0 }: OperatorProps) {
                 <path
                   d="M118 250 Q118 165 145 156 Q170 148 195 158"
                   fill="none"
-                  stroke="url(#rim-{id})"
+                  stroke={`url(#rim-${id})`}
                   strokeWidth="2"
                   opacity="0.9"
                 />
