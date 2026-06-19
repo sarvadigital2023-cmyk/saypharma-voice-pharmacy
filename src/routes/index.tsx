@@ -138,36 +138,33 @@ function HomePage() {
             }}
           />
 
-          {/* Keep the existing monitors visible, only darken the far edges */}
+          {/* Darken only the other operators — keep the existing monitors alive */}
           <div
             className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
               activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
               background:
-                "radial-gradient(ellipse 30% 72% at 88% 49%, transparent 0%, transparent 44%, oklch(0.04 0.03 252 / 0.34) 100%), linear-gradient(to right, oklch(0.04 0.03 252 / 0.18), transparent 35%, transparent 78%, oklch(0.04 0.03 252 / 0.08))",
+                "radial-gradient(ellipse 13% 22% at 68% 48%, oklch(0.03 0.02 252 / 0.62), transparent 74%), radial-gradient(ellipse 11% 18% at 58% 47%, oklch(0.03 0.02 252 / 0.52), transparent 76%), linear-gradient(to right, transparent 0%, transparent 48%, oklch(0.04 0.03 252 / 0.16) 70%, transparent 100%)",
             }}
           />
 
-          {/* Actually BRIGHTEN her — backdrop-filter boosts the underlying image */}
-          <div
+          {/* Bright duplicate of the nearest operator — real image stays visible and stronger */}
+          <img
+            src={callCenterBg}
+            alt=""
+            aria-hidden="true"
             className={`pointer-events-none absolute transition-opacity duration-500 ${
               activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
-              right: "-1%",
-              top: "4%",
-              width: "35%",
-              height: "88%",
-              borderRadius: "50%",
-              backdropFilter:
-                "brightness(2.85) contrast(1.55) saturate(2.4)",
-              WebkitBackdropFilter:
-                "brightness(2.85) contrast(1.55) saturate(2.4)",
-              maskImage:
-                "radial-gradient(ellipse 54% 68% at 62% 45%, black 0%, black 58%, transparent 84%)",
-              WebkitMaskImage:
-                "radial-gradient(ellipse 54% 68% at 62% 45%, black 0%, black 58%, transparent 84%)",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              filter: "brightness(1.95) contrast(1.36) saturate(1.85)",
+              clipPath: "ellipse(22% 42% at 88% 50%)",
+              mixBlendMode: "screen",
             }}
           />
 
@@ -177,13 +174,13 @@ function HomePage() {
               activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
-              right: "-6%",
+              right: "-5%",
               top: "0%",
               width: "43%",
               height: "96%",
               background:
-                "radial-gradient(ellipse 46% 50% at 70% 34%, oklch(0.96 0.30 176 / 0.62), transparent 58%), radial-gradient(ellipse 58% 68% at 62% 56%, transparent 16%, oklch(0.92 0.31 166 / 0.70) 50%, oklch(0.76 0.25 198 / 0.36) 72%, transparent 90%)",
-              filter: "blur(12px)",
+                "radial-gradient(ellipse 40% 46% at 72% 35%, oklch(0.98 0.30 176 / 0.76), transparent 58%), radial-gradient(ellipse 62% 72% at 68% 54%, transparent 14%, oklch(0.92 0.31 166 / 0.82) 48%, oklch(0.76 0.25 198 / 0.42) 70%, transparent 90%)",
+              filter: "blur(10px)",
               mixBlendMode: "screen",
             }}
           />
@@ -208,10 +205,10 @@ function HomePage() {
               activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
             style={{
-              left: "30%",
-              top: "62%",
-              width: "min(38%, 360px)",
-              minWidth: "142px",
+              left: "24%",
+              bottom: "11%",
+              width: "min(40%, 360px)",
+              minWidth: "138px",
               aspectRatio: "16 / 9",
               perspective: "1200px",
               zIndex: 6,
@@ -292,8 +289,9 @@ function HomePage() {
               </div>
             </div>
             {/* Stand */}
-            <div className="mx-auto h-6 w-[13%] bg-gradient-to-b from-[#20242b] to-[#07090d]" />
-            <div className="mx-auto h-2 w-[48%] rounded-full bg-gradient-to-b from-[#20242b] to-[#05060a] shadow-[0_10px_28px_rgba(0,0,0,0.75),0_0_32px_oklch(0.82_0.24_180/0.32)]" />
+            <div className="mx-auto h-7 w-[12%] bg-gradient-to-b from-[#20242b] to-[#07090d] shadow-[0_0_18px_oklch(0.82_0.24_180/0.22)]" />
+            <div className="mx-auto h-2.5 w-[54%] rounded-full bg-gradient-to-b from-[#20242b] to-[#05060a] shadow-[0_10px_28px_rgba(0,0,0,0.78),0_0_32px_oklch(0.82_0.24_180/0.32)]" />
+            <div className="mx-auto -mt-1 h-3 w-[78%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.58),transparent_70%)] blur-sm" />
           </div>
 
           {/* Top neon ceiling strip */}
