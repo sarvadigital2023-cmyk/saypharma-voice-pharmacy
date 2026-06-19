@@ -161,13 +161,13 @@ function HomePage() {
               height: "92%",
               borderRadius: "50%",
               backdropFilter:
-                "brightness(1.55) contrast(1.18) saturate(1.45)",
+                "brightness(1.95) contrast(1.28) saturate(1.7)",
               WebkitBackdropFilter:
-                "brightness(1.55) contrast(1.18) saturate(1.45)",
+                "brightness(1.95) contrast(1.28) saturate(1.7)",
               maskImage:
-                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 40%, transparent 78%)",
+                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 45%, transparent 80%)",
               WebkitMaskImage:
-                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 40%, transparent 78%)",
+                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 45%, transparent 80%)",
             }}
           />
 
