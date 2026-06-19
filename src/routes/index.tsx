@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill } from "lucide-react";
-import { CallCenterBackdrop, LiveMonitor } from "@/components/operator-scene";
+import { Operator, LiveMonitor } from "@/components/operator-scene";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -26,15 +26,27 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
+const OPERATORS = [
+  { id: 1, x: 12, scale: 0.55, delay: 0 },
+  { id: 2, x: 30, scale: 0.7, delay: 1.2 },
+  { id: 3, x: 50, scale: 1.0, delay: 0.6 },
+  { id: 4, x: 70, scale: 0.72, delay: 1.8 },
+  { id: 5, x: 88, scale: 0.58, delay: 0.3 },
+];
+
 function HomePage() {
   const [talking, setTalking] = useState(false);
-  // central operator (index 3 of 6) lights up when in conversation
-  const activeIndex = talking ? 3 : null;
+  // The "central" operator (id: 3) lights up. Easy to swap by random pick later.
+  const activeId = talking ? 3 : null;
 
   return (
-    <div className="relative min-h-screen">
-      {/* Cinematic full-page call-center backdrop */}
-      <CallCenterBackdrop activeIndex={activeIndex} />
+    <div className="relative min-h-screen overflow-hidden">
+      {/* Ambient backdrop */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute inset-x-0 top-0 h-[60vh] bg-[radial-gradient(ellipse_at_top,oklch(0.30_0.08_240/0.4),transparent_70%)]" />
+        <div className="absolute inset-0 floor-grid opacity-60" />
+        <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-background to-transparent" />
+      </div>
 
       {/* Top nav */}
       <header className="relative z-40 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
@@ -42,7 +54,7 @@ function HomePage() {
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[var(--shadow-glow)]">
             <Pill className="h-4 w-4" />
           </span>
-          <span className="font-display text-lg font-semibold tracking-tight neon-text">
+          <span className="font-display text-lg font-semibold tracking-tight">
             SayPharma
           </span>
         </a>
@@ -58,10 +70,10 @@ function HomePage() {
 
       {/* HERO */}
       <main className="relative z-10 mx-auto max-w-7xl px-5 pb-24 sm:px-8">
-        <div className="grid items-center gap-10 pt-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12 lg:pt-16">
+        <div className="grid items-center gap-10 pt-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12 lg:pt-12">
           {/* Left: copy + CTA */}
           <div className="relative">
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/50 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground backdrop-blur shadow-[0_0_20px_-5px_var(--glow-soft)]">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground backdrop-blur">
               <Sparkles className="h-3 w-3 text-accent" />
               Голосовая аптека · бета
             </span>
@@ -69,7 +81,7 @@ function HomePage() {
             <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
               Закажите лекарство
               <br />
-              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent neon-text">
+              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
                 одним разговором.
               </span>
             </h1>
@@ -105,14 +117,7 @@ function HomePage() {
               </button>
 
               <span className="text-xs text-muted-foreground">
-                {talking ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    Оператор слушает вас
-                  </span>
-                ) : (
-                  "Бесплатно · без регистрации"
-                )}
+                {talking ? "Идёт разговор · слушаю вас" : "Бесплатно · без регистрации"}
               </span>
             </div>
 
@@ -139,15 +144,50 @@ function HomePage() {
           </div>
         </div>
 
-        {/* spacer to let the backdrop breathe before content sections */}
-        <div className="h-[42vh] sm:h-[48vh]" aria-hidden="true">
-          <div className="mx-auto mt-auto flex h-full max-w-md items-end justify-center pb-6 font-mono text-[10px] uppercase tracking-[0.35em] text-muted-foreground/60">
+        {/* CALL-CENTER STAGE */}
+        <section
+          aria-label="Виртуальный колл-центр"
+          className="relative mt-16 h-[420px] w-full overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card/40 to-background/60 backdrop-blur-sm sm:h-[480px]"
+        >
+          {/* Back wall glow */}
+          <div className="absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_center_top,oklch(0.30_0.12_220/0.35),transparent_70%)]" />
+          {/* Floor */}
+          <div className="absolute inset-x-0 bottom-0 h-2/3 floor-grid" />
+
+          {/* Soft lights overhead */}
+          <div className="absolute inset-x-0 top-0 flex justify-around px-10">
+            {OPERATORS.map((op) => (
+              <div
+                key={op.id}
+                className={`h-1 w-24 rounded-full transition-all duration-700 ${
+                  activeId === op.id
+                    ? "bg-glow shadow-[0_0_30px_var(--glow)]"
+                    : "bg-primary/20"
+                }`}
+              />
+            ))}
+          </div>
+
+          {/* Operators */}
+          {OPERATORS.map((op) => (
+            <Operator
+              key={op.id}
+              id={op.id}
+              x={op.x}
+              scale={op.scale}
+              delay={op.delay}
+              active={activeId === op.id}
+            />
+          ))}
+
+          {/* Floor caption */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground/60">
             saypharma · operations floor
           </div>
-        </div>
+        </section>
 
         {/* HOW IT WORKS */}
-        <section id="how" className="mt-8">
+        <section id="how" className="mt-24">
           <h2 className="font-display text-2xl font-semibold sm:text-3xl">
             Три шага вместо корзины
           </h2>
@@ -175,7 +215,7 @@ function HomePage() {
             ].map((s) => (
               <article
                 key={s.n}
-                className="group relative overflow-hidden rounded-2xl border border-border bg-card/60 p-6 backdrop-blur-md transition hover:border-primary/50 hover:shadow-[0_0_40px_-10px_var(--glow-soft)]"
+                className="group relative overflow-hidden rounded-2xl border border-border bg-card/40 p-6 backdrop-blur-sm transition hover:border-primary/40"
               >
                 <span className="font-mono text-xs text-accent">{s.n}</span>
                 <h3 className="mt-3 font-display text-lg font-semibold">{s.t}</h3>
@@ -191,7 +231,7 @@ function HomePage() {
         {/* TRUST */}
         <section
           id="trust"
-          className="mt-20 grid items-center gap-8 rounded-3xl border border-border bg-card/60 p-8 backdrop-blur-md sm:p-10 lg:grid-cols-2"
+          className="mt-20 grid items-center gap-8 rounded-3xl border border-border bg-card/40 p-8 backdrop-blur-sm sm:p-10 lg:grid-cols-2"
         >
           <div>
             <h2 className="font-display text-2xl font-semibold sm:text-3xl">
