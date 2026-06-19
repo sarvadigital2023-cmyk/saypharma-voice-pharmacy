@@ -1,8 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill } from "lucide-react";
 import { LiveMonitor } from "@/components/operator-scene";
 import callCenterBg from "@/assets/call-center-bg.jpg";
+
+const STAGE_LINES = [
+  "Распознаю речь…",
+  "Анализирую запрос…",
+  "Проверяю наличие на складе…",
+  "Нашёл подходящий товар…",
+  "Сверяю с рецептом…",
+  "Рассчитываю доставку…",
+  "Оформляю заказ…",
+  "Готово. Подтвердите голосом.",
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
