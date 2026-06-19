@@ -145,7 +145,7 @@ function HomePage() {
             }`}
             style={{
               background:
-                "radial-gradient(ellipse 12% 22% at 68% 48%, oklch(0.03 0.02 252 / 0.74), transparent 74%), radial-gradient(ellipse 11% 18% at 58% 47%, oklch(0.03 0.02 252 / 0.60), transparent 76%), linear-gradient(to right, transparent 0%, transparent 48%, oklch(0.04 0.03 252 / 0.20) 72%, transparent 100%)",
+                "radial-gradient(ellipse 12% 22% at 68% 48%, oklch(0.03 0.02 252 / 0.74), transparent 74%), radial-gradient(ellipse 11% 18% at 58% 47%, oklch(0.03 0.02 252 / 0.60), transparent 76%), radial-gradient(ellipse 14% 36% at 94% 50%, oklch(0.03 0.02 252 / 0.58), transparent 76%), linear-gradient(to right, transparent 0%, transparent 48%, oklch(0.04 0.03 252 / 0.18) 72%, transparent 100%)",
             }}
           />
 
@@ -162,8 +162,8 @@ function HomePage() {
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              filter: "brightness(1.95) contrast(1.36) saturate(1.85)",
-              clipPath: "ellipse(13% 38% at 93% 50%)",
+              filter: "brightness(2.25) contrast(1.42) saturate(2.05)",
+              clipPath: "ellipse(14% 40% at 79% 50%)",
               mixBlendMode: "screen",
             }}
           />
@@ -174,13 +174,12 @@ function HomePage() {
               activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
-              right: "-9%",
-              top: "0%",
-              width: "32%",
-              height: "96%",
+              inset: 0,
+              width: "100%",
+              height: "100%",
               background:
-                "radial-gradient(ellipse 42% 48% at 76% 34%, oklch(0.98 0.30 176 / 0.86), transparent 58%), radial-gradient(ellipse 56% 70% at 72% 55%, transparent 10%, oklch(0.92 0.31 166 / 0.86) 48%, oklch(0.76 0.25 198 / 0.46) 70%, transparent 90%)",
-              filter: "blur(10px)",
+                "radial-gradient(ellipse 11% 26% at 79% 49%, oklch(0.98 0.30 176 / 0.72), transparent 70%), radial-gradient(ellipse 17% 42% at 79% 52%, transparent 14%, oklch(0.92 0.31 166 / 0.74) 48%, oklch(0.76 0.25 198 / 0.36) 70%, transparent 88%)",
+              filter: "blur(9px)",
               mixBlendMode: "screen",
             }}
           />
@@ -191,7 +190,7 @@ function HomePage() {
               activeId ? "opacity-70" : "opacity-0"
             }`}
             style={{
-              right: "6%",
+              right: "14%",
               background:
                 "linear-gradient(to bottom, oklch(0.95 0.28 170 / 0.55) 0%, oklch(0.85 0.26 160 / 0.25) 50%, transparent 95%)",
               filter: "blur(16px)",
@@ -205,8 +204,8 @@ function HomePage() {
               activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
             style={{
-              left: "52%",
-              bottom: "8%",
+              left: "35%",
+              bottom: "3%",
               width: "min(35%, 340px)",
               minWidth: "132px",
               aspectRatio: "16 / 9",
