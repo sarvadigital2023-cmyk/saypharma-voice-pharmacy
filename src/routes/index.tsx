@@ -48,8 +48,20 @@ const OPERATORS = [
 
 function HomePage() {
   const [talking, setTalking] = useState(false);
+  const [stageIdx, setStageIdx] = useState(0);
   // The "central" operator (id: 3) lights up. Easy to swap by random pick later.
   const activeId = talking ? 3 : null;
+
+  useEffect(() => {
+    if (!talking) {
+      setStageIdx(0);
+      return;
+    }
+    const t = setInterval(() => {
+      setStageIdx((s) => (s + 1) % STAGE_LINES.length);
+    }, 1800);
+    return () => clearInterval(t);
+  }, [talking]);
 
   return (
     <div className="relative min-h-screen overflow-hidden">
