@@ -138,14 +138,14 @@ function HomePage() {
             }}
           />
 
-          {/* Heavy dim layer for everyone except the nearest (rightmost) operator */}
+          {/* Keep the existing monitors visible, only darken the far edges */}
           <div
             className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
               activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
               background:
-                "radial-gradient(ellipse 34% 88% at 87% 54%, transparent 0%, transparent 38%, oklch(0.04 0.03 252 / 0.84) 100%)",
+                "radial-gradient(ellipse 30% 72% at 88% 49%, transparent 0%, transparent 44%, oklch(0.04 0.03 252 / 0.34) 100%), linear-gradient(to right, oklch(0.04 0.03 252 / 0.18), transparent 35%, transparent 78%, oklch(0.04 0.03 252 / 0.08))",
             }}
           />
 
@@ -156,18 +156,18 @@ function HomePage() {
             }`}
             style={{
               right: "-1%",
-              top: "6%",
+              top: "4%",
               width: "35%",
-              height: "82%",
+              height: "88%",
               borderRadius: "50%",
               backdropFilter:
-                "brightness(2.35) contrast(1.42) saturate(2.15)",
+                "brightness(2.85) contrast(1.55) saturate(2.4)",
               WebkitBackdropFilter:
-                "brightness(2.35) contrast(1.42) saturate(2.15)",
+                "brightness(2.85) contrast(1.55) saturate(2.4)",
               maskImage:
-                "radial-gradient(ellipse 58% 64% at 56% 48%, black 0%, black 52%, transparent 82%)",
+                "radial-gradient(ellipse 54% 68% at 62% 45%, black 0%, black 58%, transparent 84%)",
               WebkitMaskImage:
-                "radial-gradient(ellipse 58% 64% at 56% 48%, black 0%, black 52%, transparent 82%)",
+                "radial-gradient(ellipse 54% 68% at 62% 45%, black 0%, black 58%, transparent 84%)",
             }}
           />
 
@@ -177,13 +177,13 @@ function HomePage() {
               activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
-              right: "-5%",
-              top: "2%",
-              width: "42%",
-              height: "92%",
+              right: "-6%",
+              top: "0%",
+              width: "43%",
+              height: "96%",
               background:
-                "radial-gradient(ellipse 48% 48% at 62% 34%, oklch(0.96 0.28 178 / 0.44), transparent 58%), radial-gradient(ellipse 58% 58% at 54% 58%, transparent 18%, oklch(0.92 0.30 166 / 0.58) 50%, oklch(0.76 0.24 198 / 0.32) 72%, transparent 90%)",
-              filter: "blur(14px)",
+                "radial-gradient(ellipse 46% 50% at 70% 34%, oklch(0.96 0.30 176 / 0.62), transparent 58%), radial-gradient(ellipse 58% 68% at 62% 56%, transparent 16%, oklch(0.92 0.31 166 / 0.70) 50%, oklch(0.76 0.25 198 / 0.36) 72%, transparent 90%)",
+              filter: "blur(12px)",
               mixBlendMode: "screen",
             }}
           />
@@ -208,9 +208,10 @@ function HomePage() {
               activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
             style={{
-              right: "8%",
-              top: "58%",
-              width: "clamp(170px, 42%, 420px)",
+              left: "30%",
+              top: "62%",
+              width: "min(38%, 360px)",
+              minWidth: "142px",
               aspectRatio: "16 / 9",
               perspective: "1200px",
               zIndex: 6,
@@ -224,7 +225,7 @@ function HomePage() {
                   "linear-gradient(160deg, #343a44 0%, #171b22 48%, #080a0f 100%)",
                 boxShadow:
                   "0 26px 46px rgba(0,0,0,0.68), 0 0 70px oklch(0.92 0.30 170 / 0.82), 0 0 150px oklch(0.82 0.28 195 / 0.46), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -10px 18px rgba(0,0,0,0.45)",
-                transform: "rotateY(-14deg) rotateX(5deg)",
+                transform: "rotateY(8deg) rotateX(4deg)",
               }}
             >
               {/* Screen */}
