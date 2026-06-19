@@ -145,7 +145,7 @@ function HomePage() {
             }`}
             style={{
               background:
-                "radial-gradient(ellipse 36% 100% at 86% 60%, transparent 0%, transparent 30%, oklch(0.05 0.03 252 / 0.78) 92%)",
+                "radial-gradient(ellipse 34% 88% at 87% 54%, transparent 0%, transparent 38%, oklch(0.04 0.03 252 / 0.84) 100%)",
             }}
           />
 
@@ -155,35 +155,35 @@ function HomePage() {
               activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
-              right: "-2%",
-              top: "5%",
-              width: "34%",
-              height: "92%",
+              right: "-1%",
+              top: "6%",
+              width: "35%",
+              height: "82%",
               borderRadius: "50%",
               backdropFilter:
-                "brightness(1.95) contrast(1.28) saturate(1.7)",
+                "brightness(2.35) contrast(1.42) saturate(2.15)",
               WebkitBackdropFilter:
-                "brightness(1.95) contrast(1.28) saturate(1.7)",
+                "brightness(2.35) contrast(1.42) saturate(2.15)",
               maskImage:
-                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 45%, transparent 80%)",
+                "radial-gradient(ellipse 58% 64% at 56% 48%, black 0%, black 52%, transparent 82%)",
               WebkitMaskImage:
-                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 45%, transparent 80%)",
+                "radial-gradient(ellipse 58% 64% at 56% 48%, black 0%, black 52%, transparent 82%)",
             }}
           />
 
-          {/* Soft cyan-green rim glow on top (subtle, doesn't wash her out) */}
+          {/* Bright cyan-green rim glow on top (keeps her visible and selected) */}
           <div
             className={`pointer-events-none absolute transition-opacity duration-700 animate-breath ${
-              activeId ? "opacity-80" : "opacity-0"
+              activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
-              right: "-4%",
-              top: "0%",
-              width: "38%",
-              height: "100%",
+              right: "-5%",
+              top: "2%",
+              width: "42%",
+              height: "92%",
               background:
-                "radial-gradient(ellipse 55% 55% at 55% 50%, transparent 30%, oklch(0.90 0.28 165 / 0.45) 55%, oklch(0.78 0.22 200 / 0.25) 72%, transparent 88%)",
-              filter: "blur(18px)",
+                "radial-gradient(ellipse 48% 48% at 62% 34%, oklch(0.96 0.28 178 / 0.44), transparent 58%), radial-gradient(ellipse 58% 58% at 54% 58%, transparent 18%, oklch(0.92 0.30 166 / 0.58) 50%, oklch(0.76 0.24 198 / 0.32) 72%, transparent 90%)",
+              filter: "blur(14px)",
               mixBlendMode: "screen",
             }}
           />
@@ -208,33 +208,33 @@ function HomePage() {
               activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
             style={{
-              right: "6%",
-              top: "44%",
-              width: "30%",
-              maxWidth: "360px",
-              aspectRatio: "16 / 10",
-              perspective: "1000px",
+              right: "8%",
+              top: "58%",
+              width: "clamp(170px, 42%, 420px)",
+              aspectRatio: "16 / 9",
+              perspective: "1200px",
+              zIndex: 6,
             }}
           >
             {/* Monitor body */}
             <div
-              className="relative h-full w-full rounded-[10px] p-[5px]"
+              className="relative h-full w-full rounded-[14px] p-[7px]"
               style={{
                 background:
-                  "linear-gradient(160deg, #2a2f38 0%, #15181d 55%, #0a0c10 100%)",
+                  "linear-gradient(160deg, #343a44 0%, #171b22 48%, #080a0f 100%)",
                 boxShadow:
-                  "0 18px 40px rgba(0,0,0,0.55), 0 0 80px oklch(0.92 0.30 170 / 0.7), 0 0 140px oklch(0.85 0.28 195 / 0.4), inset 0 1px 0 rgba(255,255,255,0.06)",
-                transform: "rotateY(-10deg) rotateX(3deg)",
+                  "0 26px 46px rgba(0,0,0,0.68), 0 0 70px oklch(0.92 0.30 170 / 0.82), 0 0 150px oklch(0.82 0.28 195 / 0.46), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -10px 18px rgba(0,0,0,0.45)",
+                transform: "rotateY(-14deg) rotateX(5deg)",
               }}
             >
               {/* Screen */}
               <div
-                className="relative h-full w-full overflow-hidden rounded-[5px] animate-screen-flicker"
+                className="relative h-full w-full overflow-hidden rounded-[7px] animate-screen-flicker"
                 style={{
                   background:
-                    "linear-gradient(135deg, #04140f 0%, #06221a 60%, #03100c 100%)",
+                    "radial-gradient(circle at 68% 38%, rgba(65,255,213,0.30), transparent 42%), linear-gradient(135deg, #06251c 0%, #0a3b2d 54%, #03130f 100%)",
                   boxShadow:
-                    "inset 0 0 30px oklch(0.95 0.30 165 / 0.45), inset 0 0 60px oklch(0.85 0.28 200 / 0.25)",
+                    "inset 0 0 28px oklch(0.98 0.30 165 / 0.62), inset 0 0 70px oklch(0.84 0.28 198 / 0.38)",
                 }}
               >
                 {/* Scanlines on screen */}
@@ -247,24 +247,32 @@ function HomePage() {
                       "linear-gradient(115deg, rgba(255,255,255,0.10) 0%, transparent 40%, transparent 70%, rgba(255,255,255,0.04) 100%)",
                   }}
                 />
-                <div className="relative p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
+                <div className="relative flex h-full flex-col justify-between p-3 sm:p-4">
+                  <div className="flex items-center gap-1.5">
                     <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.95_0.30_30)] animate-breath" />
                     <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.92_0.22_90)]" />
                     <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.92_0.25_150)]" />
-                    <span className="ml-1 font-mono text-[7px] uppercase tracking-[0.25em] text-[oklch(0.85_0.18_165)]">
-                      saypharma · console
+                    <span className="ml-1 font-mono text-[clamp(6px,1.15vw,10px)] uppercase tracking-[0.22em] text-[oklch(0.90_0.20_165)]">
+                      SayPharma · Console
                     </span>
                   </div>
-                  <div className="font-mono text-[10px] leading-relaxed text-[oklch(0.96_0.22_160)] min-h-[40px]">
-                    <div className="opacity-50 text-[8px]">$ saypharma --listen</div>
-                    <div className="mt-1">
-                      <span className="text-[oklch(0.80_0.20_165)]">&gt; </span>
-                      {STAGE_LINES[stageIdx]}
-                      <span className="animate-caret">▌</span>
-                    </div>
+                  <div className="relative mt-1 min-h-[54px] overflow-hidden font-mono text-[clamp(9px,1.8vw,14px)] leading-relaxed text-[oklch(0.96_0.22_160)] sm:min-h-[78px]">
+                    {[0, 1, 2].map((offset) => {
+                      const line = STAGE_LINES[(stageIdx + offset) % STAGE_LINES.length];
+                      return (
+                        <div
+                          key={`${line}-${offset}`}
+                          className={`transition-all duration-500 ${offset === 0 ? "opacity-100" : "opacity-55"}`}
+                          style={{ transform: `translateX(${offset * 9}px)` }}
+                        >
+                          <span className="text-[oklch(0.82_0.22_170)]">&gt; </span>
+                          {line}
+                          {offset === 0 ? <span className="animate-caret">▌</span> : null}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-[oklch(0.30_0.08_180/0.4)]">
+                  <div className="h-1 w-full overflow-hidden rounded-full bg-[oklch(0.30_0.08_180/0.45)]">
                     <div
                       className="h-full transition-all duration-700"
                       style={{
@@ -278,13 +286,13 @@ function HomePage() {
                 </div>
               </div>
               {/* Bezel chin with brand dot */}
-              <div className="flex items-center justify-center pt-1 pb-0.5">
-                <span className="h-1 w-1 rounded-full bg-[oklch(0.85_0.18_165)] shadow-[0_0_6px_oklch(0.85_0.18_165)]" />
+              <div className="absolute inset-x-0 bottom-0 flex translate-y-[55%] items-center justify-center">
+                <span className="h-2 w-2 rounded-full bg-[oklch(0.88_0.24_165)] shadow-[0_0_12px_oklch(0.88_0.24_165)]" />
               </div>
             </div>
             {/* Stand */}
-            <div className="mx-auto mt-0.5 h-2 w-[18%] bg-gradient-to-b from-[#1a1d22] to-[#0a0c10] rounded-b-sm" />
-            <div className="mx-auto h-1 w-[40%] bg-gradient-to-b from-[#15181d] to-[#05060a] rounded-sm" />
+            <div className="mx-auto h-6 w-[13%] bg-gradient-to-b from-[#20242b] to-[#07090d]" />
+            <div className="mx-auto h-2 w-[48%] rounded-full bg-gradient-to-b from-[#20242b] to-[#05060a] shadow-[0_10px_28px_rgba(0,0,0,0.75),0_0_32px_oklch(0.82_0.24_180/0.32)]" />
           </div>
 
           {/* Top neon ceiling strip */}
