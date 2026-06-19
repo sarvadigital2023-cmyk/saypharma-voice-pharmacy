@@ -152,10 +152,15 @@ function HomePage() {
           aria-label="Виртуальный колл-центр"
           className="relative mt-16 h-[420px] w-full overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card/40 to-background/60 backdrop-blur-sm sm:h-[480px]"
         >
-          {/* Back wall glow */}
-          <div className="absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_center_top,oklch(0.30_0.12_220/0.35),transparent_70%)]" />
+          {/* Back wall glow + aurora ribbon */}
+          <div className="absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_center_top,oklch(0.45_0.18_200/0.45),transparent_70%)]" />
+          <div className="absolute inset-x-0 top-0 h-2/3 aurora animate-aurora opacity-80" />
+          {/* Subtle scanlines on the back wall */}
+          <div className="absolute inset-0 scanlines opacity-40 mix-blend-overlay" />
           {/* Floor */}
           <div className="absolute inset-x-0 bottom-0 h-2/3 floor-grid" />
+          {/* Floor neon horizon line */}
+          <div className="absolute inset-x-0 top-1/3 h-px bg-gradient-to-r from-transparent via-[oklch(0.85_0.20_200/0.7)] to-transparent shadow-[0_0_20px_oklch(0.85_0.20_200/0.6)]" />
 
           {/* Soft lights overhead */}
           <div className="absolute inset-x-0 top-0 flex justify-around px-10">
