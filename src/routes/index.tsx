@@ -1,8 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill } from "lucide-react";
 import { LiveMonitor } from "@/components/operator-scene";
 import callCenterBg from "@/assets/call-center-bg.jpg";
+
+const STAGE_LINES = [
+  "Распознаю речь…",
+  "Анализирую запрос…",
+  "Проверяю наличие на складе…",
+  "Нашёл подходящий товар…",
+  "Сверяю с рецептом…",
+  "Рассчитываю доставку…",
+  "Оформляю заказ…",
+  "Готово. Подтвердите голосом.",
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -37,8 +48,20 @@ const OPERATORS = [
 
 function HomePage() {
   const [talking, setTalking] = useState(false);
+  const [stageIdx, setStageIdx] = useState(0);
   // The "central" operator (id: 3) lights up. Easy to swap by random pick later.
   const activeId = talking ? 3 : null;
+
+  useEffect(() => {
+    if (!talking) {
+      setStageIdx(0);
+      return;
+    }
+    const t = setInterval(() => {
+      setStageIdx((s) => (s + 1) % STAGE_LINES.length);
+    }, 1800);
+    return () => clearInterval(t);
+  }, [talking]);
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -187,37 +210,99 @@ function HomePage() {
             }`}
             style={{
               background:
-                "radial-gradient(ellipse 32% 95% at 88% 60%, transparent 0%, transparent 35%, oklch(0.06 0.03 252 / 0.72) 90%)",
+                "radial-gradient(ellipse 34% 100% at 88% 60%, transparent 0%, transparent 28%, oklch(0.05 0.03 252 / 0.82) 90%)",
             }}
           />
 
-          {/* Bright neon spotlight (cyan + green) on the nearest operator */}
+          {/* INTENSE neon spotlight (cyan + green) on the nearest operator */}
           <div
-            className={`pointer-events-none absolute top-[5%] h-[95%] w-[36%] rounded-full transition-opacity duration-700 ${
+            className={`pointer-events-none absolute -top-[5%] h-[115%] w-[44%] rounded-full transition-opacity duration-700 ${
               activeId ? "opacity-100 animate-breath" : "opacity-0"
             }`}
             style={{
-              right: "-4%",
+              right: "-8%",
               background:
-                "radial-gradient(ellipse 60% 70% at 50% 50%, oklch(0.95 0.26 175 / 0.85) 0%, oklch(0.88 0.28 150 / 0.55) 30%, oklch(0.78 0.22 200 / 0.30) 55%, transparent 80%)",
-              filter: "blur(26px)",
+                "radial-gradient(ellipse 55% 65% at 50% 50%, oklch(0.98 0.30 175 / 1) 0%, oklch(0.92 0.32 160 / 0.85) 18%, oklch(0.85 0.30 145 / 0.6) 38%, oklch(0.78 0.24 200 / 0.35) 60%, transparent 82%)",
+              filter: "blur(24px)",
               mixBlendMode: "screen",
             }}
           />
 
-          {/* Secondary bright green rim accent */}
+          {/* Inner hot core — pure neon green-cyan halo on her head/shoulders */}
           <div
-            className={`pointer-events-none absolute top-[20%] h-[70%] w-[22%] rounded-full transition-opacity duration-1000 ${
-              activeId ? "opacity-90" : "opacity-0"
+            className={`pointer-events-none absolute top-[22%] h-[60%] w-[24%] rounded-full transition-opacity duration-500 ${
+              activeId ? "opacity-100 animate-breath" : "opacity-0"
             }`}
             style={{
-              right: "2%",
+              right: "0%",
               background:
-                "radial-gradient(ellipse, oklch(0.92 0.30 145 / 0.55) 0%, transparent 70%)",
-              filter: "blur(40px)",
+                "radial-gradient(ellipse, oklch(0.97 0.32 165 / 0.85) 0%, oklch(0.90 0.30 150 / 0.5) 35%, transparent 70%)",
+              filter: "blur(18px)",
               mixBlendMode: "screen",
             }}
           />
+
+          {/* Vertical neon beam from ceiling onto her */}
+          <div
+            className={`pointer-events-none absolute top-0 h-full w-[12%] transition-opacity duration-700 ${
+              activeId ? "opacity-90" : "opacity-0"
+            }`}
+            style={{
+              right: "8%",
+              background:
+                "linear-gradient(to bottom, oklch(0.95 0.28 170 / 0.7) 0%, oklch(0.85 0.26 160 / 0.4) 40%, transparent 90%)",
+              filter: "blur(14px)",
+              mixBlendMode: "screen",
+            }}
+          />
+
+          {/* Her glowing monitor with running status text */}
+          <div
+            className={`pointer-events-none absolute transition-all duration-500 ${
+              activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
+            style={{
+              left: "38%",
+              top: "44%",
+              width: "26%",
+              maxWidth: "320px",
+            }}
+          >
+            <div
+              className="relative rounded-lg border p-3 backdrop-blur-sm animate-screen-flicker"
+              style={{
+                borderColor: "oklch(0.90 0.28 165 / 0.7)",
+                background:
+                  "linear-gradient(135deg, oklch(0.20 0.10 180 / 0.85), oklch(0.18 0.12 150 / 0.85))",
+                boxShadow:
+                  "0 0 30px oklch(0.92 0.30 165 / 0.7), 0 0 60px oklch(0.85 0.26 175 / 0.5), inset 0 0 20px oklch(0.95 0.28 160 / 0.25)",
+              }}
+            >
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.95_0.30_30)] animate-breath" />
+                <span className="font-mono text-[8px] uppercase tracking-widest text-[oklch(0.95_0.25_165)]">
+                  saypharma · live
+                </span>
+              </div>
+              <div className="font-mono text-[10px] leading-relaxed text-[oklch(0.96_0.20_160)] min-h-[28px]">
+                <span className="text-[oklch(0.75_0.18_165)]">&gt; </span>
+                {STAGE_LINES[stageIdx]}
+                <span className="animate-caret">▌</span>
+              </div>
+              <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-[oklch(0.30_0.08_180/0.5)]">
+                <div
+                  className="h-full transition-all duration-700"
+                  style={{
+                    width: `${((stageIdx + 1) / STAGE_LINES.length) * 100}%`,
+                    background:
+                      "linear-gradient(to right, oklch(0.92 0.30 165), oklch(0.85 0.26 200))",
+                    boxShadow: "0 0 8px oklch(0.92 0.30 165)",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
 
 
 
