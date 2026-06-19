@@ -151,49 +151,57 @@ function HomePage() {
         {/* CALL-CENTER STAGE */}
         <section
           aria-label="Виртуальный колл-центр"
-          className="relative mt-16 h-[420px] w-full overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card/40 to-background/60 backdrop-blur-sm sm:h-[480px]"
+          className="relative mt-16 h-[420px] w-full overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-panel)] sm:h-[480px]"
         >
-          {/* Back wall glow + aurora ribbon */}
-          <div className="absolute inset-x-0 top-0 h-2/3 bg-[radial-gradient(ellipse_at_center_top,oklch(0.45_0.18_200/0.45),transparent_70%)]" />
-          <div className="absolute inset-x-0 top-0 h-2/3 aurora animate-aurora opacity-80" />
-          {/* Subtle scanlines on the back wall */}
-          <div className="absolute inset-0 scanlines opacity-40 mix-blend-overlay" />
-          {/* Floor */}
-          <div className="absolute inset-x-0 bottom-0 h-2/3 floor-grid" />
-          {/* Floor neon horizon line */}
-          <div className="absolute inset-x-0 top-1/3 h-px bg-gradient-to-r from-transparent via-[oklch(0.85_0.20_200/0.7)] to-transparent shadow-[0_0_20px_oklch(0.85_0.20_200/0.6)]" />
+          {/* Premium neon call-center photographic backdrop */}
+          <img
+            src={callCenterBg}
+            alt="Команда операторов SayPharma в неоновом колл-центре"
+            loading="lazy"
+            width={1920}
+            height={1080}
+            className="absolute inset-0 h-full w-full object-cover"
+          />
 
-          {/* Soft lights overhead */}
-          <div className="absolute inset-x-0 top-0 flex justify-around px-10">
-            {OPERATORS.map((op) => (
-              <div
-                key={op.id}
-                className={`h-1 w-24 rounded-full transition-all duration-700 ${
-                  activeId === op.id
-                    ? "bg-glow shadow-[0_0_30px_var(--glow)]"
-                    : "bg-primary/20"
-                }`}
-              />
-            ))}
-          </div>
+          {/* Color grade + depth wash */}
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,oklch(0.10_0.04_252/0.55)_75%,oklch(0.08_0.03_252/0.85)_100%)]" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-background/40" />
 
-          {/* Operators */}
-          {OPERATORS.map((op) => (
-            <Operator
-              key={op.id}
-              id={op.id}
-              x={op.x}
-              scale={op.scale}
-              delay={op.delay}
-              active={activeId === op.id}
-            />
-          ))}
+          {/* Aurora + scanlines for luminescent atmosphere */}
+          <div className="pointer-events-none absolute -inset-10 aurora animate-aurora opacity-40 mix-blend-screen" />
+          <div className="pointer-events-none absolute inset-0 scanlines opacity-30 mix-blend-overlay" />
+
+          {/* Drifting bokeh particles */}
+          <div
+            className="pointer-events-none absolute inset-0 opacity-70 animate-aurora mix-blend-screen"
+            style={{
+              background:
+                "radial-gradient(2px 2px at 18% 30%, oklch(0.92 0.18 200 / 0.9), transparent 60%), radial-gradient(1.5px 1.5px at 72% 22%, oklch(0.88 0.20 290 / 0.7), transparent 60%), radial-gradient(2px 2px at 35% 78%, oklch(0.90 0.18 195 / 0.8), transparent 60%), radial-gradient(1.5px 1.5px at 88% 65%, oklch(0.85 0.18 220 / 0.7), transparent 60%), radial-gradient(2px 2px at 55% 45%, oklch(0.92 0.20 200 / 0.6), transparent 60%)",
+            }}
+          />
+
+          {/* Active spotlight on the central operator */}
+          <div
+            className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[70%] w-[35%] rounded-full transition-opacity duration-700 ${
+              activeId ? "opacity-100 animate-breath" : "opacity-0"
+            }`}
+            style={{
+              background:
+                "radial-gradient(ellipse, oklch(0.90 0.22 195 / 0.45) 0%, oklch(0.75 0.20 210 / 0.20) 40%, transparent 70%)",
+              filter: "blur(20px)",
+              mixBlendMode: "screen",
+            }}
+          />
+
+          {/* Top neon ceiling strip */}
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[oklch(0.88_0.20_195/0.9)] to-transparent shadow-[0_0_30px_oklch(0.88_0.20_195/0.7)]" />
 
           {/* Floor caption */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground/60">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground/70">
             saypharma · operations floor
           </div>
         </section>
+
 
         {/* HOW IT WORKS */}
         <section id="how" className="mt-24">
