@@ -210,33 +210,44 @@ function HomePage() {
             }`}
             style={{
               background:
-                "radial-gradient(ellipse 34% 100% at 88% 60%, transparent 0%, transparent 28%, oklch(0.05 0.03 252 / 0.82) 90%)",
+                "radial-gradient(ellipse 36% 100% at 86% 60%, transparent 0%, transparent 30%, oklch(0.05 0.03 252 / 0.78) 92%)",
             }}
           />
 
-          {/* INTENSE neon spotlight (cyan + green) on the nearest operator */}
+          {/* Actually BRIGHTEN her — backdrop-filter boosts the underlying image */}
           <div
-            className={`pointer-events-none absolute -top-[5%] h-[115%] w-[44%] rounded-full transition-opacity duration-700 ${
-              activeId ? "opacity-100 animate-breath" : "opacity-0"
+            className={`pointer-events-none absolute transition-opacity duration-500 ${
+              activeId ? "opacity-100" : "opacity-0"
             }`}
             style={{
-              right: "-8%",
-              background:
-                "radial-gradient(ellipse 55% 65% at 50% 50%, oklch(0.98 0.30 175 / 1) 0%, oklch(0.92 0.32 160 / 0.85) 18%, oklch(0.85 0.30 145 / 0.6) 38%, oklch(0.78 0.24 200 / 0.35) 60%, transparent 82%)",
-              filter: "blur(24px)",
-              mixBlendMode: "screen",
+              right: "-2%",
+              top: "5%",
+              width: "34%",
+              height: "92%",
+              borderRadius: "50%",
+              backdropFilter:
+                "brightness(1.55) contrast(1.18) saturate(1.45)",
+              WebkitBackdropFilter:
+                "brightness(1.55) contrast(1.18) saturate(1.45)",
+              maskImage:
+                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 40%, transparent 78%)",
+              WebkitMaskImage:
+                "radial-gradient(ellipse 55% 60% at 55% 50%, black 0%, black 40%, transparent 78%)",
             }}
           />
 
-          {/* Inner hot core — pure neon green-cyan halo on her head/shoulders */}
+          {/* Soft cyan-green rim glow on top (subtle, doesn't wash her out) */}
           <div
-            className={`pointer-events-none absolute top-[22%] h-[60%] w-[24%] rounded-full transition-opacity duration-500 ${
-              activeId ? "opacity-100 animate-breath" : "opacity-0"
+            className={`pointer-events-none absolute transition-opacity duration-700 animate-breath ${
+              activeId ? "opacity-80" : "opacity-0"
             }`}
             style={{
-              right: "0%",
+              right: "-4%",
+              top: "0%",
+              width: "38%",
+              height: "100%",
               background:
-                "radial-gradient(ellipse, oklch(0.97 0.32 165 / 0.85) 0%, oklch(0.90 0.30 150 / 0.5) 35%, transparent 70%)",
+                "radial-gradient(ellipse 55% 55% at 55% 50%, transparent 30%, oklch(0.90 0.28 165 / 0.45) 55%, oklch(0.78 0.22 200 / 0.25) 72%, transparent 88%)",
               filter: "blur(18px)",
               mixBlendMode: "screen",
             }}
@@ -244,14 +255,14 @@ function HomePage() {
 
           {/* Vertical neon beam from ceiling onto her */}
           <div
-            className={`pointer-events-none absolute top-0 h-full w-[12%] transition-opacity duration-700 ${
-              activeId ? "opacity-90" : "opacity-0"
+            className={`pointer-events-none absolute top-0 h-[60%] w-[14%] transition-opacity duration-700 ${
+              activeId ? "opacity-70" : "opacity-0"
             }`}
             style={{
-              right: "8%",
+              right: "6%",
               background:
-                "linear-gradient(to bottom, oklch(0.95 0.28 170 / 0.7) 0%, oklch(0.85 0.26 160 / 0.4) 40%, transparent 90%)",
-              filter: "blur(14px)",
+                "linear-gradient(to bottom, oklch(0.95 0.28 170 / 0.55) 0%, oklch(0.85 0.26 160 / 0.25) 50%, transparent 95%)",
+              filter: "blur(16px)",
               mixBlendMode: "screen",
             }}
           />
@@ -262,30 +273,30 @@ function HomePage() {
               activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
             style={{
-              left: "38%",
-              top: "44%",
-              width: "26%",
-              maxWidth: "320px",
+              left: "36%",
+              top: "42%",
+              width: "28%",
+              maxWidth: "340px",
             }}
           >
             <div
               className="relative rounded-lg border p-3 backdrop-blur-sm animate-screen-flicker"
               style={{
-                borderColor: "oklch(0.90 0.28 165 / 0.7)",
+                borderColor: "oklch(0.92 0.30 165 / 0.85)",
                 background:
-                  "linear-gradient(135deg, oklch(0.20 0.10 180 / 0.85), oklch(0.18 0.12 150 / 0.85))",
+                  "linear-gradient(135deg, oklch(0.22 0.14 175 / 0.92), oklch(0.20 0.16 150 / 0.92))",
                 boxShadow:
-                  "0 0 30px oklch(0.92 0.30 165 / 0.7), 0 0 60px oklch(0.85 0.26 175 / 0.5), inset 0 0 20px oklch(0.95 0.28 160 / 0.25)",
+                  "0 0 40px oklch(0.95 0.32 165 / 0.85), 0 0 80px oklch(0.85 0.28 175 / 0.6), inset 0 0 24px oklch(0.97 0.30 160 / 0.35)",
               }}
             >
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.95_0.30_30)] animate-breath" />
-                <span className="font-mono text-[8px] uppercase tracking-widest text-[oklch(0.95_0.25_165)]">
+                <span className="font-mono text-[8px] uppercase tracking-widest text-[oklch(0.97_0.25_165)]">
                   saypharma · live
                 </span>
               </div>
-              <div className="font-mono text-[10px] leading-relaxed text-[oklch(0.96_0.20_160)] min-h-[28px]">
-                <span className="text-[oklch(0.75_0.18_165)]">&gt; </span>
+              <div className="font-mono text-[10px] leading-relaxed text-[oklch(0.98_0.22_160)] min-h-[28px]">
+                <span className="text-[oklch(0.80_0.20_165)]">&gt; </span>
                 {STAGE_LINES[stageIdx]}
                 <span className="animate-caret">▌</span>
               </div>
@@ -295,13 +306,15 @@ function HomePage() {
                   style={{
                     width: `${((stageIdx + 1) / STAGE_LINES.length) * 100}%`,
                     background:
-                      "linear-gradient(to right, oklch(0.92 0.30 165), oklch(0.85 0.26 200))",
-                    boxShadow: "0 0 8px oklch(0.92 0.30 165)",
+                      "linear-gradient(to right, oklch(0.95 0.32 165), oklch(0.88 0.26 200))",
+                    boxShadow: "0 0 10px oklch(0.95 0.32 165)",
                   }}
                 />
               </div>
             </div>
           </div>
+
+
 
 
 
