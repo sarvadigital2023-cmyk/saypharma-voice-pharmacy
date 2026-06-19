@@ -180,18 +180,31 @@ function HomePage() {
             }}
           />
 
-          {/* Active spotlight on the central operator */}
+          {/* Active spotlight on a specific operator (right-of-center) */}
           <div
-            className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-[70%] w-[35%] rounded-full transition-opacity duration-700 ${
+            className={`pointer-events-none absolute top-[18%] h-[78%] w-[28%] rounded-full transition-opacity duration-700 ${
               activeId ? "opacity-100 animate-breath" : "opacity-0"
             }`}
             style={{
+              left: "58%",
+              transform: "translateX(-50%)",
               background:
-                "radial-gradient(ellipse, oklch(0.90 0.22 195 / 0.45) 0%, oklch(0.75 0.20 210 / 0.20) 40%, transparent 70%)",
-              filter: "blur(20px)",
+                "radial-gradient(ellipse, oklch(0.92 0.24 180 / 0.65) 0%, oklch(0.85 0.22 160 / 0.35) 35%, oklch(0.75 0.20 210 / 0.18) 60%, transparent 80%)",
+              filter: "blur(22px)",
               mixBlendMode: "screen",
             }}
           />
+          {/* Dim the rest when one operator is highlighted */}
+          <div
+            className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
+              activeId ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              background:
+                "radial-gradient(ellipse 28% 78% at 58% 55%, transparent 0%, transparent 50%, oklch(0.08 0.03 252 / 0.55) 100%)",
+            }}
+          />
+
 
           {/* Top neon ceiling strip */}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[oklch(0.88_0.20_195/0.9)] to-transparent shadow-[0_0_30px_oklch(0.88_0.20_195/0.7)]" />
