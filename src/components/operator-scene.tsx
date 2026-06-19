@@ -24,24 +24,42 @@ export function Operator({ id, active, x, scale, delay = 0 }: OperatorProps) {
       className="absolute bottom-[18%] -translate-x-1/2 transition-all duration-700"
       style={{
         left: `${x}%`,
-        transform: `translateX(-50%) scale(${scale})`,
+        transform: `translateX(-50%) scale(${active ? scale * 1.12 : scale})`,
         zIndex: active ? 30 : Math.round(scale * 10),
-        filter: active ? "none" : `brightness(${0.55 + scale * 0.3})`,
+        filter: active
+          ? "drop-shadow(0 0 22px oklch(0.88 0.20 195 / 0.55)) drop-shadow(0 0 60px oklch(0.78 0.18 200 / 0.45))"
+          : `brightness(${0.45 + scale * 0.28}) saturate(0.85) blur(${(1 - scale) * 0.6}px)`,
       }}
     >
       <div
         className="relative animate-float-soft"
         style={{ animationDelay: `${delay}s` }}
       >
-        {/* Glow halo when active */}
+        {/* Glow halo when active — teal/cyan luminescent */}
         {active && (
-          <div
-            className="pointer-events-none absolute -inset-12 rounded-full opacity-80 animate-breath"
-            style={{
-              background:
-                "radial-gradient(circle, var(--glow-soft) 0%, transparent 65%)",
-            }}
-          />
+          <>
+            <div
+              className="pointer-events-none absolute -inset-16 rounded-full opacity-90 animate-breath"
+              style={{
+                background:
+                  "radial-gradient(circle, oklch(0.88 0.20 195 / 0.55) 0%, oklch(0.70 0.20 210 / 0.25) 35%, transparent 70%)",
+              }}
+            />
+            {/* Vertical light beam from above */}
+            <div
+              className="pointer-events-none absolute left-1/2 -top-72 h-80 w-44 spot-beam animate-beam-sway"
+              aria-hidden="true"
+            />
+            {/* Floor reflection */}
+            <div
+              className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[-30px] h-10 w-56 rounded-[100%] opacity-80"
+              style={{
+                background:
+                  "radial-gradient(ellipse, oklch(0.85 0.20 200 / 0.6), transparent 70%)",
+                filter: "blur(8px)",
+              }}
+            />
+          </>
         )}
 
         <svg
