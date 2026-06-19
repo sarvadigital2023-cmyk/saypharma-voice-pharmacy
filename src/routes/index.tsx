@@ -95,86 +95,11 @@ function HomePage() {
         </button>
       </header>
 
-      {/* HERO */}
+      {/* CALL-CENTER STAGE */}
       <main className="relative z-10 mx-auto max-w-7xl px-5 pb-24 sm:px-8">
-        <div className="grid items-center gap-10 pt-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12 lg:pt-12">
-          {/* Left: copy + CTA */}
-          <div className="relative">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground backdrop-blur">
-              <Sparkles className="h-3 w-3 text-accent" />
-              Голосовая аптека · бета
-            </span>
-
-            <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              Закажите лекарство
-              <br />
-              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                одним разговором.
-              </span>
-            </h1>
-
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-              SayPharma — это аптека, где не нужно искать товар вручную.
-              Поговорите с ИИ-оператором голосом — он найдёт препарат,
-              проверит наличие и оформит доставку за минуту.
-            </p>
-
-            {/* The CTA */}
-            <div className="mt-9 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
-              <button
-                onClick={() => setTalking((t) => !t)}
-                className={`group relative inline-flex items-center gap-3 rounded-full px-7 py-4 text-sm font-semibold transition-all ${
-                  talking
-                    ? "bg-card text-foreground glow-ring"
-                    : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02]"
-                }`}
-              >
-                <span
-                  className={`relative grid h-9 w-9 place-items-center rounded-full ${
-                    talking ? "bg-primary/20 pulse-ring" : "bg-white/15"
-                  }`}
-                >
-                  {talking ? (
-                    <MicOff className="h-4 w-4" />
-                  ) : (
-                    <Mic className="h-4 w-4" />
-                  )}
-                </span>
-                {talking ? "Завершить разговор" : "Поговорить с SayPharma"}
-              </button>
-
-              <span className="text-xs text-muted-foreground">
-                {talking ? "Идёт разговор · слушаю вас" : "Бесплатно · без регистрации"}
-              </span>
-            </div>
-
-            {/* Trust strip */}
-            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-2">
-                <ShieldCheck className="h-3.5 w-3.5 text-accent" />
-                Лицензированные поставщики
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <Truck className="h-3.5 w-3.5 text-accent" />
-                Доставка за 60 минут
-              </span>
-              <span className="inline-flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-accent" />
-                ИИ работает 24/7
-              </span>
-            </div>
-          </div>
-
-          {/* Right: live monitor panel */}
-          <div className="relative flex justify-center lg:justify-end">
-            <LiveMonitor running={talking} />
-          </div>
-        </div>
-
-        {/* CALL-CENTER STAGE */}
         <section
           aria-label="Виртуальный колл-центр"
-          className="relative mt-16 h-[420px] w-full overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-panel)] sm:h-[480px]"
+          className="relative h-[420px] w-full overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-panel)] sm:h-[480px]"
         >
           {/* Premium neon call-center photographic backdrop */}
           <img
@@ -314,11 +239,6 @@ function HomePage() {
             </div>
           </div>
 
-
-
-
-
-
           {/* Top neon ceiling strip */}
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[oklch(0.88_0.20_195/0.9)] to-transparent shadow-[0_0_30px_oklch(0.88_0.20_195/0.7)]" />
 
@@ -327,6 +247,82 @@ function HomePage() {
             saypharma · operations floor
           </div>
         </section>
+
+        {/* HERO */}
+        <div className="grid items-center gap-10 mt-16 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
+          {/* Left: copy + CTA */}
+          <div className="relative">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground backdrop-blur">
+              <Sparkles className="h-3 w-3 text-accent" />
+              Голосовая аптека · бета
+            </span>
+
+            <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+              Закажите лекарство
+              <br />
+              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                одним разговором.
+              </span>
+            </h1>
+
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
+              SayPharma — это аптека, где не нужно искать товар вручную.
+              Поговорите с ИИ-оператором голосом — он найдёт препарат,
+              проверит наличие и оформит доставку за минуту.
+            </p>
+
+            {/* The CTA */}
+            <div className="mt-9 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+              <button
+                onClick={() => setTalking((t) => !t)}
+                className={`group relative inline-flex items-center gap-3 rounded-full px-7 py-4 text-sm font-semibold transition-all ${
+                  talking
+                    ? "bg-card text-foreground glow-ring"
+                    : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02]"
+                }`}
+              >
+                <span
+                  className={`relative grid h-9 w-9 place-items-center rounded-full ${
+                    talking ? "bg-primary/20 pulse-ring" : "bg-white/15"
+                  }`}
+                >
+                  {talking ? (
+                    <MicOff className="h-4 w-4" />
+                  ) : (
+                    <Mic className="h-4 w-4" />
+                  )}
+                </span>
+                {talking ? "Завершить разговор" : "Поговорить с SayPharma"}
+              </button>
+
+              <span className="text-xs text-muted-foreground">
+                {talking ? "Идёт разговор · слушаю вас" : "Бесплатно · без регистрации"}
+              </span>
+            </div>
+
+            {/* Trust strip */}
+            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-2">
+                <ShieldCheck className="h-3.5 w-3.5 text-accent" />
+                Лицензированные поставщики
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Truck className="h-3.5 w-3.5 text-accent" />
+                Доставка за 60 минут
+              </span>
+              <span className="inline-flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-accent" />
+                ИИ работает 24/7
+              </span>
+            </div>
+          </div>
+
+          {/* Right: live monitor panel */}
+          <div className="relative flex justify-center lg:justify-end">
+            <LiveMonitor running={talking} />
+          </div>
+        </div>
+
 
 
         {/* HOW IT WORKS */}
