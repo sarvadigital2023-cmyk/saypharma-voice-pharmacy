@@ -97,7 +97,7 @@ function HomePage() {
 
       {/* HERO */}
       <main className="relative z-10 mx-auto max-w-7xl px-5 pb-24 sm:px-8">
-        <div className="grid items-center gap-10 pt-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12 lg:pt-12 mt-16 order-2">
+        <div className="grid items-center gap-10 pt-6 lg:grid-cols-[1.1fr_1fr] lg:gap-12 lg:pt-12">
           {/* Left: copy + CTA */}
           <div className="relative">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground backdrop-blur">
