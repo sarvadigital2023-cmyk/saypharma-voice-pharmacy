@@ -6,14 +6,14 @@ import { LiveMonitor } from "@/components/operator-scene";
 import callCenterBg from "@/assets/call-center-bg.jpg";
 
 const STAGE_LINES = [
-  "Распознаю речь…",
-  "Анализирую запрос…",
-  "Проверяю наличие на складе…",
-  "Нашёл подходящий товар…",
-  "Сверяю с рецептом…",
-  "Рассчитываю доставку…",
-  "Оформляю заказ…",
-  "Готово. Подтвердите голосом.",
+  "Recognizing speech…",
+  "Analyzing request…",
+  "Checking stock availability…",
+  "Found the product…",
+  "Verifying prescription…",
+  "Calculating delivery…",
+  "Placing the order…",
+  "Done. Please confirm by voice.",
 ];
 
 export const Route = createFileRoute("/")({
