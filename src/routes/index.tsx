@@ -314,24 +314,7 @@ function HomePage() {
             </div>
           </div>
 
-              <div className="font-mono text-[10px] leading-relaxed text-[oklch(0.96_0.20_160)] min-h-[28px]">
-                <span className="text-[oklch(0.75_0.18_165)]">&gt; </span>
-                {STAGE_LINES[stageIdx]}
-                <span className="animate-caret">▌</span>
-              </div>
-              <div className="mt-2 h-0.5 w-full overflow-hidden rounded-full bg-[oklch(0.30_0.08_180/0.5)]">
-                <div
-                  className="h-full transition-all duration-700"
-                  style={{
-                    width: `${((stageIdx + 1) / STAGE_LINES.length) * 100}%`,
-                    background:
-                      "linear-gradient(to right, oklch(0.92 0.30 165), oklch(0.85 0.26 200))",
-                    boxShadow: "0 0 8px oklch(0.92 0.30 165)",
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+
 
 
 
