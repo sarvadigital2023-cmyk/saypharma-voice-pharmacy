@@ -208,11 +208,12 @@ function HomePage() {
               activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
             style={{
-              left: "37%",
-              top: "40%",
-              width: "26%",
-              maxWidth: "320px",
-              perspective: "900px",
+              right: "6%",
+              top: "44%",
+              width: "30%",
+              maxWidth: "360px",
+              aspectRatio: "16 / 10",
+              perspective: "1000px",
             }}
           >
             {/* Monitor body */}
