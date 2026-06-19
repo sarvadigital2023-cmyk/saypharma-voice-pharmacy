@@ -68,88 +68,121 @@
   --input: oklch(0.30 0.03 252 / 60%);
   --ring: oklch(0.82 0.14 220);
 
-  --glow: oklch(0.85 0.18 215);
-  --glow-soft: oklch(0.70 0.16 215 / 35%);
+  --glow: oklch(0.88 0.19 200);
+  --glow-soft: oklch(0.78 0.18 200 / 45%);
+  --glow-cyan: oklch(0.90 0.20 195);
+  --glow-violet: oklch(0.65 0.20 290);
 
   --gradient-hero: radial-gradient(
-      ellipse 80% 60% at 50% 0%,
-      oklch(0.30 0.08 240 / 0.55),
+      ellipse 90% 55% at 50% 0%,
+      oklch(0.32 0.10 220 / 0.6),
       transparent 70%
     ),
-    radial-gradient(ellipse 60% 80% at 50% 100%, oklch(0.22 0.05 220 / 0.6), transparent 60%),
-    linear-gradient(180deg, oklch(0.13 0.02 250), oklch(0.18 0.025 252));
+    radial-gradient(ellipse 55% 70% at 18% 90%, oklch(0.30 0.14 290 / 0.35), transparent 65%),
+    radial-gradient(ellipse 55% 70% at 82% 95%, oklch(0.32 0.14 195 / 0.4), transparent 65%),
+    linear-gradient(180deg, oklch(0.10 0.025 250), oklch(0.15 0.03 252));
 
-  --shadow-glow: 0 0 80px -10px var(--glow-soft), 0 0 30px -5px var(--glow-soft);
-  --shadow-panel: 0 25px 50px -20px oklch(0 0 0 / 0.6), 0 0 0 1px oklch(1 0 0 / 0.05) inset;
+  --shadow-glow: 0 0 90px -10px var(--glow-soft), 0 0 40px -5px var(--glow-soft);
+  --shadow-panel:
+    0 25px 60px -20px oklch(0 0 0 / 0.7),
+    0 0 0 1px oklch(1 0 0 / 0.06) inset,
+    0 1px 0 0 oklch(1 0 0 / 0.05) inset;
 }
 
 @layer base {
-  * {
-    border-color: var(--color-border);
-  }
-
-  html,
-  body {
+  * { border-color: var(--color-border); }
+  html, body {
     background: var(--background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }
-
   body {
     background: var(--gradient-hero);
     min-height: 100vh;
+    position: relative;
   }
-
-  h1,
-  h2,
-  h3 {
-    font-family: var(--font-display);
-    letter-spacing: -0.02em;
+  body::before {
+    content: "";
+    position: fixed;
+    inset: -10%;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(circle at 20% 20%, oklch(0.55 0.20 200 / 0.10), transparent 45%),
+      radial-gradient(circle at 80% 30%, oklch(0.55 0.22 290 / 0.08), transparent 50%),
+      radial-gradient(circle at 50% 90%, oklch(0.60 0.20 195 / 0.10), transparent 55%);
+    filter: blur(40px);
+    animation: haze-drift 22s ease-in-out infinite alternate;
   }
+  h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; }
 }
 
-/* Floor perspective grid */
 @utility floor-grid {
   background-image:
-    linear-gradient(to right, oklch(0.82 0.14 220 / 0.08) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.82 0.14 220 / 0.08) 1px, transparent 1px);
+    linear-gradient(to right, oklch(0.85 0.18 200 / 0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.85 0.18 200 / 0.10) 1px, transparent 1px);
   background-size: 60px 60px;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 40%, black 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 45%, black 100%);
 }
 
 @utility glow-ring {
   box-shadow:
-    0 0 0 1px oklch(0.82 0.14 220 / 0.4),
+    0 0 0 1px oklch(0.85 0.18 200 / 0.45),
     0 0 40px -5px var(--glow-soft),
-    0 0 80px -10px var(--glow-soft);
+    0 0 100px -10px var(--glow-soft);
 }
 
-@keyframes breath {
-  0%, 100% { opacity: 0.55; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.04); }
+@utility scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0, transparent 3px,
+    oklch(0.85 0.18 200 / 0.05) 3px,
+    oklch(0.85 0.18 200 / 0.05) 4px
+  );
 }
-@keyframes screen-flicker {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 1; }
+
+@utility spot-beam {
+  background: linear-gradient(
+    to bottom,
+    oklch(0.90 0.20 195 / 0.55) 0%,
+    oklch(0.85 0.18 200 / 0.20) 35%,
+    transparent 80%
+  );
+  filter: blur(6px);
+  mix-blend-mode: screen;
 }
-@keyframes pulse-ring {
-  0% { transform: scale(0.9); opacity: 0.7; }
-  100% { transform: scale(1.8); opacity: 0; }
+
+@utility aurora {
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 30%, oklch(0.65 0.22 195 / 0.50), transparent 65%),
+    radial-gradient(ellipse 50% 35% at 70% 40%, oklch(0.55 0.22 290 / 0.42), transparent 65%),
+    radial-gradient(ellipse 70% 30% at 50% 70%, oklch(0.60 0.20 220 / 0.38), transparent 70%);
+  filter: blur(30px);
 }
-@keyframes caret {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+
+@keyframes breath { 0%,100%{opacity:.55;transform:scale(1)} 50%{opacity:1;transform:scale(1.06)} }
+@keyframes screen-flicker { 0%,100%{opacity:.85} 47%{opacity:.92} 50%{opacity:1} 53%{opacity:.88} }
+@keyframes pulse-ring { 0%{transform:scale(.9);opacity:.75} 100%{transform:scale(1.9);opacity:0} }
+@keyframes caret { 0%,50%{opacity:1} 51%,100%{opacity:0} }
+@keyframes float-soft { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes haze-drift { 0%{transform:translate3d(0,0,0) scale(1)} 100%{transform:translate3d(2%,-1%,0) scale(1.06)} }
+@keyframes beam-sway {
+  0%,100% { transform: translateX(-50%) rotate(-2deg); opacity:.75; }
+  50%     { transform: translateX(-50%) rotate(2deg);  opacity:1;   }
 }
-@keyframes float-soft {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+@keyframes aurora-shift {
+  0%,100% { transform: translate3d(0,0,0) scale(1); opacity:.85; }
+  50%     { transform: translate3d(-3%,2%,0) scale(1.08); opacity:1; }
 }
 
 .animate-breath { animation: breath 4s ease-in-out infinite; }
-.animate-screen-flicker { animation: screen-flicker 3s ease-in-out infinite; }
+.animate-screen-flicker { animation: screen-flicker 3.4s ease-in-out infinite; }
 .animate-caret { animation: caret 1s steps(1) infinite; }
 .animate-float-soft { animation: float-soft 6s ease-in-out infinite; }
+.animate-beam-sway { animation: beam-sway 6s ease-in-out infinite; transform-origin: top center; }
+.animate-aurora { animation: aurora-shift 14s ease-in-out infinite; }
+
 .pulse-ring::before,
 .pulse-ring::after {
   content: "";
@@ -160,3 +193,6 @@
   animation: pulse-ring 2.4s ease-out infinite;
 }
 .pulse-ring::after { animation-delay: 1.2s; }
+
+.text-glow { color: var(--glow); text-shadow: 0 0 8px var(--glow-soft); }
+.bg-glow { background: var(--glow); }
