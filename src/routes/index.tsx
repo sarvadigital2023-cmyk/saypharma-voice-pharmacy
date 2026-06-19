@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill } from "lucide-react";
-import { Operator, LiveMonitor } from "@/components/operator-scene";
+import { LiveMonitor } from "@/components/operator-scene";
+import callCenterBg from "@/assets/call-center-bg.jpg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
