@@ -264,25 +264,11 @@ function HomePage() {
           <div className="relative">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground backdrop-blur">
               <Sparkles className="h-3 w-3 text-accent" />
-              Голосовая аптека · бета
+              Голосовая аптека · SayPharma
             </span>
 
-            <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              Закажите лекарство
-              <br />
-              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                одним разговором.
-              </span>
-            </h1>
-
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-              SayPharma — это аптека, где не нужно искать товар вручную.
-              Поговорите с ИИ-оператором голосом — он найдёт препарат,
-              проверит наличие и оформит доставку за минуту.
-            </p>
-
             {/* The CTA */}
-            <div className="mt-9 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+            <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <button
                 onClick={() => setTalking((t) => !t)}
                 className={`group relative inline-flex items-center gap-3 rounded-full px-7 py-4 text-sm font-semibold transition-all ${
@@ -309,6 +295,20 @@ function HomePage() {
                 {talking ? "Идёт разговор · слушаю вас" : "Бесплатно · без регистрации"}
               </span>
             </div>
+
+            <h1 className="mt-9 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+              Закажите лекарство
+              <br />
+              <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+                одним разговором.
+              </span>
+            </h1>
+
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
+              SayPharma — это аптека, где не нужно искать товар вручную.
+              Поговорите с ИИ-оператором голосом — он найдёт препарат,
+              проверит наличие и оформит доставку за минуту.
+            </p>
 
             {/* Trust strip */}
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-muted-foreground">
