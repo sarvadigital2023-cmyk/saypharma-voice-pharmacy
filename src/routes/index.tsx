@@ -4,6 +4,7 @@ import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill, Settings } from "lucid
 import { Link } from "@tanstack/react-router";
 import { LiveMonitor } from "@/components/operator-scene";
 import callCenterEn from "@/assets/call-center-en.jpg";
+import { useI18n } from "@/i18n";
 
 const STAGE_LINES = [
   "Processing order…",
@@ -40,6 +41,7 @@ export const Route = createFileRoute("/")({
 });
 
 function HomePage() {
+  const { t } = useI18n();
   const [talking, setTalking] = useState(false);
 
   return (
@@ -65,17 +67,17 @@ function HomePage() {
           </span>
         </a>
         <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">
-          <a href="#how" className="hover:text-foreground transition">Как это работает</a>
-          <a href="#trust" className="hover:text-foreground transition">Безопасность</a>
-          <a href="#contact" className="hover:text-foreground transition">Контакты</a>
+          <a href="#how" className="hover:text-foreground transition">{t("nav.how")}</a>
+          <a href="#trust" className="hover:text-foreground transition">{t("nav.security")}</a>
+          <a href="#contact" className="hover:text-foreground transition">{t("nav.contacts")}</a>
         </nav>
         <div className="flex items-center gap-2">
           <button className="rounded-full border border-border bg-card/60 px-4 py-2 text-xs font-medium backdrop-blur-md hover:border-primary/50 transition">
-            Войти
+            {t("nav.signIn")}
           </button>
           <Link
             to="/settings"
-            aria-label="Настройки"
+            aria-label={t("nav.settings")}
             className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card/60 text-muted-foreground backdrop-blur-md transition hover:border-primary/50 hover:text-foreground hover:rotate-45"
           >
             <Settings className="h-4 w-4" />
@@ -295,7 +297,7 @@ function HomePage() {
           <div className="relative">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground backdrop-blur">
               <Sparkles className="h-3 w-3 text-accent" />
-              Голосовая аптека · SayPharma
+              {t("home.badge")}
             </span>
 
             {/* The CTA */}
@@ -319,41 +321,39 @@ function HomePage() {
                     <Mic className="h-4 w-4" />
                   )}
                 </span>
-                {talking ? "Завершить разговор" : "Поговорить с SayPharma"}
+                {talking ? t("home.cta.stop") : t("home.cta.start")}
               </button>
 
               <span className="text-xs text-muted-foreground">
-                {talking ? "Идёт разговор · слушаю вас" : "Бесплатно · без регистрации"}
+                {talking ? t("home.caption.talking") : t("home.caption.idle")}
               </span>
             </div>
 
             <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              Закажите лекарство
+              {t("home.h1a")}
               <br />
               <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-                одним разговором.
+                {t("home.h1b")}
               </span>
             </h1>
 
             <p className="mt-5 max-w-lg text-base leading-relaxed text-muted-foreground sm:text-lg">
-              SayPharma — это аптека, где не нужно искать товар вручную.
-              Поговорите с ИИ-оператором голосом — он найдёт препарат,
-              проверит наличие и оформит доставку за минуту.
+              {t("home.lead")}
             </p>
 
             {/* Trust strip */}
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-2">
                 <ShieldCheck className="h-3.5 w-3.5 text-accent" />
-                Лицензированные поставщики
+                {t("home.trust.licensed")}
               </span>
               <span className="inline-flex items-center gap-2">
                 <Truck className="h-3.5 w-3.5 text-accent" />
-                Доставка за 60 минут
+                {t("home.trust.delivery")}
               </span>
               <span className="inline-flex items-center gap-2">
                 <Sparkles className="h-3.5 w-3.5 text-accent" />
-                ИИ работает 24/7
+                {t("home.trust.ai247")}
               </span>
             </div>
           </div>
@@ -367,29 +367,17 @@ function HomePage() {
         {/* HOW IT WORKS */}
         <section id="how" className="mt-24">
           <h2 className="font-display text-2xl font-semibold sm:text-3xl">
-            Три шага вместо корзины
+            {t("how.title")}
           </h2>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            Никаких карточек, фильтров и форм оплаты — всё решается в разговоре.
+            {t("how.subtitle")}
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {[
-              {
-                n: "01",
-                t: "Скажите, что нужно",
-                d: "«Нужен парацетамол и витамин D на месяц» — ИИ распознаёт даже сложные запросы.",
-              },
-              {
-                n: "02",
-                t: "Подтвердите подбор",
-                d: "Оператор уточнит дозировку, бренд и сравнит с тем, что уже есть на складе.",
-              },
-              {
-                n: "03",
-                t: "Получите доставку",
-                d: "Курьер привезёт заказ в течение часа. Оплата картой или СБП по голосовой команде.",
-              },
+              { n: "01", t: t("how.s1.t"), d: t("how.s1.d") },
+              { n: "02", t: t("how.s2.t"), d: t("how.s2.d") },
+              { n: "03", t: t("how.s3.t"), d: t("how.s3.d") },
             ].map((s) => (
               <article
                 key={s.n}
@@ -413,22 +401,16 @@ function HomePage() {
         >
           <div>
             <h2 className="font-display text-2xl font-semibold sm:text-3xl">
-              Аптечная точность.
+              {t("trust.titleA")}
               <br />
-              <span className="text-muted-foreground">Скорость разговора.</span>
+              <span className="text-muted-foreground">{t("trust.titleB")}</span>
             </h2>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
-              Каталог сверяется с реестром РЛС. Рецептурные препараты требуют
-              подтверждения. Разговоры защищены сквозным шифрованием.
+              {t("trust.lead")}
             </p>
           </div>
           <ul className="grid gap-3 text-sm">
-            {[
-              "Только лицензированные поставщики",
-              "Соответствие 152-ФЗ о персональных данных",
-              "Проверка взаимодействия препаратов",
-              "Подтверждение каждой рецептурной позиции",
-            ].map((item) => (
+            {[t("trust.i1"), t("trust.i2"), t("trust.i3"), t("trust.i4")].map((item) => (
               <li
                 key={item}
                 className="flex items-start gap-3 rounded-xl border border-border/60 bg-background/40 p-3"
@@ -446,10 +428,10 @@ function HomePage() {
         className="relative z-10 border-t border-border/60 bg-background/60 backdrop-blur"
       >
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-8 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-8">
-          <div>© {new Date().getFullYear()} SayPharma. Все права защищены.</div>
+          <div>{t("footer.rights", { year: new Date().getFullYear() })}</div>
           <div className="flex gap-5">
-            <a href="#" className="hover:text-foreground">Лицензия</a>
-            <a href="#" className="hover:text-foreground">Политика</a>
+            <a href="#" className="hover:text-foreground">{t("footer.license")}</a>
+            <a href="#" className="hover:text-foreground">{t("footer.policy")}</a>
             <a href="mailto:hi@saypharma.app" className="hover:text-foreground">
               hi@saypharma.app
             </a>

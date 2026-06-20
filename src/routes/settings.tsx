@@ -15,6 +15,9 @@ import {
   X,
 } from "lucide-react";
 
+import { useI18n, LOCALES, LOCALE_NAMES } from "@/i18n";
+import { useTheme, type Theme } from "@/theme";
+
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
@@ -29,101 +32,26 @@ export const Route = createFileRoute("/settings")({
   component: SettingsPage,
 });
 
-type Lang = "ru" | "uk" | "en";
-type Theme = "dark" | "light";
-type InfoKey = "how" | "privacy" | "terms" | "warning" | null;
+type InfoKey = "how" | "privacy" | "terms" | "warning";
 
-const LANGS: { id: Lang; label: string; sub: string }[] = [
-  { id: "ru", label: "Русский", sub: "Russian" },
-  { id: "uk", label: "Українська", sub: "Ukrainian" },
-  { id: "en", label: "English", sub: "English" },
+const INFO_ITEMS: { id: InfoKey; icon: React.ElementType; danger: boolean }[] = [
+  { id: "how", icon: Pill, danger: false },
+  { id: "privacy", icon: Lock, danger: false },
+  { id: "terms", icon: FileText, danger: false },
+  { id: "warning", icon: ShieldAlert, danger: true },
 ];
 
-const INFO_CONTENT: Record<
-  Exclude<InfoKey, null>,
-  { title: string; icon: React.ElementType; body: React.ReactNode }
-> = {
-  how: {
-    title: "Как работает SayPharma",
-    icon: Pill,
-    body: (
-      <>
-        <p>
-          SayPharma — это голосовая аптека. Вы говорите, что вам нужно, а ИИ-оператор
-          находит товар, проверяет наличие и оформляет доставку до двери.
-        </p>
-        <p>
-          Мы продаём <strong className="text-foreground">только безрецептурные</strong> препараты, а также:
-        </p>
-        <ul className="list-disc space-y-1.5 pl-5 marker:text-accent">
-          <li>витамины и БАДы;</li>
-          <li>тонометры, глюкометры, термометры;</li>
-          <li>ортопедические товары — подушки, корсеты, массажные коврики;</li>
-          <li>медицинские приборы и другие товары для здоровья, не требующие рецепта.</li>
-        </ul>
-      </>
-    ),
-  },
-  privacy: {
-    title: "Политика конфиденциальности",
-    icon: Lock,
-    body: (
-      <>
-        <p>
-          Мы обрабатываем ваши данные в соответствии с 152-ФЗ. Разговоры с
-          ИИ-оператором защищены сквозным шифрованием и используются только
-          для оформления вашего заказа.
-        </p>
-        <p>
-          Мы не передаём персональные данные третьим лицам, кроме случаев,
-          необходимых для доставки заказа (курьерская служба).
-        </p>
-      </>
-    ),
-  },
-  terms: {
-    title: "Условия использования",
-    icon: FileText,
-    body: (
-      <>
-        <p>
-          Используя SayPharma, вы соглашаетесь оформлять заказы только для
-          личного использования. Сервис предназначен для совершеннолетних.
-        </p>
-        <p>
-          Перед применением любого препарата ознакомьтесь с инструкцией и при
-          необходимости проконсультируйтесь со специалистом.
-        </p>
-      </>
-    ),
-  },
-  warning: {
-    title: "Важное предупреждение",
-    icon: ShieldAlert,
-    body: (
-      <>
-        <p className="rounded-xl border border-[oklch(0.55_0.22_25/0.4)] bg-[oklch(0.30_0.15_25/0.15)] p-4 text-[oklch(0.92_0.10_25)]">
-          SayPharma <strong>не продаёт рецептурные лекарства</strong>.
-        </p>
-        <p>
-          Для получения рецептурных препаратов, пожалуйста, обратитесь в
-          обычную аптеку к провизору и предъявите рецепт от лечащего врача.
-        </p>
-        <p>
-          Мы работаем только с безрецептурными средствами, витаминами, БАДами
-          и товарами для здоровья.
-        </p>
-      </>
-    ),
-  },
-};
+const THEME_OPTIONS: { id: Theme; icon: React.ElementType }[] = [
+  { id: "dark", icon: Moon },
+  { id: "light", icon: Sun },
+];
 
 function SettingsPage() {
-  const [lang, setLang] = useState<Lang>("ru");
-  const [theme, setTheme] = useState<Theme>("dark");
-  const [openInfo, setOpenInfo] = useState<InfoKey>(null);
+  const { t, tList, locale, setLocale } = useI18n();
+  const { theme, setTheme } = useTheme();
+  const [openInfo, setOpenInfo] = useState<InfoKey | null>(null);
 
-  const active = openInfo ? INFO_CONTENT[openInfo] : null;
+  const active = openInfo ? INFO_ITEMS.find((i) => i.id === openInfo) ?? null : null;
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
@@ -141,29 +69,29 @@ function SettingsPage() {
           className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3.5 py-2 text-sm font-medium text-muted-foreground backdrop-blur transition hover:border-primary/50 hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
-          Назад
+          {t("settings.back")}
         </Link>
         <h1 className="font-display text-base font-semibold tracking-tight sm:text-lg">
-          Настройки
+          {t("settings.title")}
         </h1>
         <span className="w-[72px]" aria-hidden />
       </header>
 
       <main className="relative z-10 mx-auto max-w-3xl px-5 pb-24 sm:px-8">
         {/* LANGUAGE */}
-        <Section title="Язык" icon={Globe}>
+        <Section title={t("settings.section.language")} icon={Globe}>
           <div className="divide-y divide-border/60">
-            {LANGS.map((l) => (
+            {LOCALES.map((id) => (
               <button
-                key={l.id}
-                onClick={() => setLang(l.id)}
+                key={id}
+                onClick={() => setLocale(id)}
                 className="flex w-full items-center justify-between px-4 py-3.5 text-left transition hover:bg-card/40"
               >
                 <div>
-                  <div className="text-sm font-medium text-foreground">{l.label}</div>
-                  <div className="text-xs text-muted-foreground">{l.sub}</div>
+                  <div className="text-sm font-medium text-foreground">{LOCALE_NAMES[id].label}</div>
+                  <div className="text-xs text-muted-foreground">{LOCALE_NAMES[id].sub}</div>
                 </div>
-                {lang === l.id && (
+                {locale === id && (
                   <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[var(--shadow-glow)]">
                     <Check className="h-3.5 w-3.5" />
                   </span>
@@ -174,14 +102,9 @@ function SettingsPage() {
         </Section>
 
         {/* THEME */}
-        <Section title="Тема" icon={theme === "dark" ? Moon : Sun}>
+        <Section title={t("settings.section.theme")} icon={theme === "dark" ? Moon : Sun}>
           <div className="grid grid-cols-2 gap-3 p-3">
-            {(
-              [
-                { id: "dark", label: "Тёмная", Icon: Moon },
-                { id: "light", label: "Светлая", Icon: Sun },
-              ] as const
-            ).map(({ id, label, Icon }) => {
+            {THEME_OPTIONS.map(({ id, icon: Icon }) => {
               const selected = theme === id;
               return (
                 <button
@@ -202,7 +125,7 @@ function SettingsPage() {
                   >
                     <Icon className="h-4 w-4" />
                   </span>
-                  <span className="text-sm font-medium">{label}</span>
+                  <span className="text-sm font-medium">{t(`settings.theme.${id}`)}</span>
                   {selected && (
                     <span className="absolute right-3 top-3 grid h-5 w-5 place-items-center rounded-full bg-primary/20 text-accent">
                       <Check className="h-3 w-3" />
@@ -215,19 +138,12 @@ function SettingsPage() {
         </Section>
 
         {/* INFO */}
-        <Section title="Информация" icon={Info}>
+        <Section title={t("settings.section.info")} icon={Info}>
           <div className="divide-y divide-border/60">
-            {(
-              [
-                { id: "how", label: "Как работает SayPharma", Icon: Pill, danger: false },
-                { id: "privacy", label: "Политика конфиденциальности", Icon: Lock, danger: false },
-                { id: "terms", label: "Условия использования", Icon: FileText, danger: false },
-                { id: "warning", label: "Важное предупреждение", Icon: ShieldAlert, danger: true },
-              ] as const
-            ).map(({ id, label, Icon, danger }) => (
+            {INFO_ITEMS.map(({ id, icon: Icon, danger }) => (
               <button
                 key={id}
-                onClick={() => setOpenInfo(id as InfoKey)}
+                onClick={() => setOpenInfo(id)}
                 className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition hover:bg-card/40"
               >
                 <span
@@ -239,7 +155,9 @@ function SettingsPage() {
                 >
                   <Icon className="h-4 w-4" />
                 </span>
-                <span className="flex-1 text-sm font-medium text-foreground">{label}</span>
+                <span className="flex-1 text-sm font-medium text-foreground">
+                  {t(`settings.info.${id}.label`)}
+                </span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
             ))}
@@ -247,7 +165,7 @@ function SettingsPage() {
         </Section>
 
         <p className="mt-10 text-center font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground/60">
-          saypharma · v1.0 · бета
+          {t("settings.version")}
         </p>
       </main>
 
@@ -266,18 +184,29 @@ function SettingsPage() {
                 <active.icon className="h-4 w-4" />
               </span>
               <h2 className="flex-1 font-display text-base font-semibold">
-                {active.title}
+                {t(`settings.info.${active.id}.label`)}
               </h2>
               <button
                 onClick={() => setOpenInfo(null)}
                 className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground transition hover:bg-muted/40 hover:text-foreground"
-                aria-label="Закрыть"
+                aria-label={t("common.close")}
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <div className="space-y-3 px-5 py-5 text-sm leading-relaxed text-muted-foreground">
-              {active.body}
+              {tList(`settings.info.${active.id}.body`).map((paragraph, i) =>
+                active.danger && i === 0 ? (
+                  <p
+                    key={i}
+                    className="rounded-xl border border-[oklch(0.55_0.22_25/0.4)] bg-[oklch(0.30_0.15_25/0.15)] p-4 font-medium text-[oklch(0.92_0.10_25)]"
+                  >
+                    {paragraph}
+                  </p>
+                ) : (
+                  <p key={i}>{paragraph}</p>
+                ),
+              )}
             </div>
           </div>
         </div>

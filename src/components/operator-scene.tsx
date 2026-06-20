@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { useI18n } from "@/i18n";
+
 /**
  * Single operator illustration — abstract, elegant silhouette of a woman at a
  * desk with a monitor. Pure SVG so it scales crisply and animates cheaply.
@@ -206,18 +208,9 @@ export function Operator({ id, active, x, scale, delay = 0 }: OperatorProps) {
   );
 }
 
-const STAGES = [
-  "Распознаю речь…",
-  "Анализирую запрос…",
-  "Проверяю наличие на складе…",
-  "Нашёл подходящий товар…",
-  "Сверяю с рецептом…",
-  "Рассчитываю доставку…",
-  "Оформляю заказ…",
-  "Готово. Подтвердите голосом.",
-];
-
 export function LiveMonitor({ running }: { running: boolean }) {
+  const { t, tList } = useI18n();
+  const stages = tList("live.stages");
   const [stage, setStage] = useState(0);
   const [typed, setTyped] = useState("");
 
@@ -229,19 +222,20 @@ export function LiveMonitor({ running }: { running: boolean }) {
     }
     let i = 0;
     setTyped("");
-    const text = STAGES[stage];
+    const text = stages[stage] ?? "";
     const typer = setInterval(() => {
       i++;
       setTyped(text.slice(0, i));
       if (i >= text.length) clearInterval(typer);
     }, 35);
     const next = setTimeout(() => {
-      setStage((s) => (s + 1) % STAGES.length);
+      setStage((s) => (s + 1) % stages.length);
     }, 2400);
     return () => {
       clearInterval(typer);
       clearTimeout(next);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, running]);
 
   return (
@@ -256,7 +250,7 @@ export function LiveMonitor({ running }: { running: boolean }) {
       </div>
 
       <div className="mt-4 space-y-2 font-mono text-xs text-muted-foreground min-h-[140px]">
-        {STAGES.slice(0, stage).map((s, i) => (
+        {stages.slice(0, stage).map((s, i) => (
           <div key={i} className="flex items-start gap-2 opacity-70">
             <span className="text-accent">✓</span>
             <span>{s}</span>
@@ -273,7 +267,7 @@ export function LiveMonitor({ running }: { running: boolean }) {
         )}
         {!running && (
           <div className="text-muted-foreground/60 italic">
-            Нажмите кнопку, чтобы начать разговор…
+            {t("live.idle")}
           </div>
         )}
       </div>
@@ -283,11 +277,11 @@ export function LiveMonitor({ running }: { running: boolean }) {
           <div className="flex-1 h-1 rounded-full bg-secondary overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
-              style={{ width: `${((stage + 1) / STAGES.length) * 100}%` }}
+              style={{ width: `${((stage + 1) / stages.length) * 100}%` }}
             />
           </div>
           <span className="font-mono text-[10px] text-muted-foreground">
-            {stage + 1}/{STAGES.length}
+            {stage + 1}/{stages.length}
           </span>
         </div>
       )}

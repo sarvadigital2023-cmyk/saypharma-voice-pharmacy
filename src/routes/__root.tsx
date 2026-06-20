@@ -10,6 +10,11 @@ import {
 import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import { ThemeProvider } from "../theme";
+import { I18nProvider } from "../i18n";
+
+// Runs before first paint so the stored theme/locale are applied with no flash.
+const THEME_BOOT = `(function(){try{var t=localStorage.getItem('sp-theme');var l=localStorage.getItem('sp-locale');var r=document.documentElement;if(t==='light')r.classList.add('light');r.style.colorScheme=t==='light'?'light':'dark';if(l==='ru'||l==='uk'||l==='en')r.lang=l;}catch(e){}})();`;
 
 function NotFoundComponent() {
   return (
@@ -118,6 +123,7 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="ru">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <HeadContent />
       </head>
       <body>
@@ -133,8 +139,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
+      <ThemeProvider>
+        <I18nProvider>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </I18nProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
