@@ -49,6 +49,11 @@ export const messages: Record<Locale, Messages> = {
     "home.trust.delivery": "Доставка за 60 минут",
     "home.trust.ai247": "ИИ работает 24/7",
 
+    "chat.label": "Чат с агентом",
+    "chat.placeholder": "Задайте вопрос…",
+    "chat.greeting": "Здравствуйте! Чем могу помочь?",
+    "chat.send": "Отправить",
+
     "how.title": "Три шага вместо корзины",
     "how.subtitle": "Никаких карточек, фильтров и форм оплаты — всё решается в разговоре.",
     "how.s1.t": "Скажите, что нужно",
@@ -137,6 +142,11 @@ export const messages: Record<Locale, Messages> = {
     "home.trust.delivery": "Доставка за 60 хвилин",
     "home.trust.ai247": "ШІ працює 24/7",
 
+    "chat.label": "Чат з агентом",
+    "chat.placeholder": "Поставте запитання…",
+    "chat.greeting": "Вітаю! Чим можу допомогти?",
+    "chat.send": "Надіслати",
+
     "how.title": "Три кроки замість кошика",
     "how.subtitle": "Жодних карток, фільтрів і форм оплати — усе вирішується в розмові.",
     "how.s1.t": "Скажіть, що потрібно",
@@ -224,6 +234,11 @@ export const messages: Record<Locale, Messages> = {
     "home.trust.licensed": "Licensed suppliers",
     "home.trust.delivery": "Delivery in 60 minutes",
     "home.trust.ai247": "AI works 24/7",
+
+    "chat.label": "Chat with agent",
+    "chat.placeholder": "Ask the agent…",
+    "chat.greeting": "Hi! How can I help you?",
+    "chat.send": "Send",
 
     "how.title": "Three steps instead of a cart",
     "how.subtitle": "No cards, filters or payment forms — everything is handled in the conversation.",
