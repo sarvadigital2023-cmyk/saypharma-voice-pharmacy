@@ -167,23 +167,6 @@ function HomePage() {
                 "radial-gradient(ellipse 11% 34% at 74% 50%, rgba(64,245,220,.6), rgba(60,170,255,.22) 55%, transparent 74%)",
             }}
           />
-          {/* Crisp rim / backlight crescent (pulsing) */}
-          <div
-            className={`pointer-events-none absolute transition-opacity duration-500 ${
-              talking ? "opacity-100 animate-sp-pulse" : "opacity-0"
-            }`}
-            style={{
-              left: "75%",
-              top: "40%",
-              width: "18%",
-              height: "52%",
-              transform: "translate(-50%,-50%)",
-              mixBlendMode: "screen",
-              filter: "blur(0.4cqw)",
-              background:
-                "radial-gradient(closest-side, transparent 56%, #6bffe0 70%, #46c8ff 80%, transparent 88%)",
-            }}
-          />
 
           {/* Running English console on HER monitor (active) */}
           <div
@@ -307,7 +290,7 @@ function HomePage() {
         </section>
 
         {/* HERO */}
-        <div className="grid items-center gap-10 mt-16 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
+        <div className="grid items-center gap-8 mt-8 lg:grid-cols-[1.1fr_1fr] lg:gap-12">
           {/* Left: copy + CTA */}
           <div className="relative">
             <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-[11px] font-medium uppercase tracking-widest text-muted-foreground backdrop-blur">
@@ -344,7 +327,7 @@ function HomePage() {
               </span>
             </div>
 
-            <h1 className="mt-9 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
+            <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
               Закажите лекарство
               <br />
               <span className="bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
