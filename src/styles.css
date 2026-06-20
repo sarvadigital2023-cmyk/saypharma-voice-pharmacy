@@ -206,3 +206,15 @@
 
 .text-glow { color: var(--glow); text-shadow: 0 0 8px var(--glow-soft); }
 .bg-glow { background: var(--glow); }
+
+/* Active call-state: neon highlight pulse + brightness "beat" + console marquee */
+@keyframes sp-pulse { 0%,100% { opacity:.55; transform: scale(1); } 50% { opacity:1; transform: scale(1.05); } }
+@keyframes sp-beat {
+  0%,100% { filter: brightness(1.2) saturate(1.4) contrast(1.05); }
+  50%     { filter: brightness(1.46) saturate(1.62) contrast(1.07); }
+}
+@keyframes sp-marquee { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+
+.animate-sp-pulse { animation: sp-pulse 1.1s ease-in-out infinite; }
+.animate-sp-beat { animation: sp-beat 1.1s ease-in-out infinite; }
+.animate-sp-marquee { animation: sp-marquee 8.5s linear infinite; will-change: transform; }

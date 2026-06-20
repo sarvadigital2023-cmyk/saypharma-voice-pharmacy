@@ -1,19 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill, Settings } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { LiveMonitor } from "@/components/operator-scene";
-import callCenterBg from "@/assets/call-center-bg.jpg";
+import callCenterEn from "@/assets/call-center-en.jpg";
 
 const STAGE_LINES = [
-  "Recognizing speech…",
-  "Analyzing request…",
-  "Checking stock availability…",
-  "Found the product…",
+  "Processing order…",
+  "Checking stock…",
   "Verifying prescription…",
-  "Calculating delivery…",
-  "Placing the order…",
-  "Done. Please confirm by voice.",
+  "Locating courier…",
+  "Calculating ETA…",
+  "Reserving item…",
+  "Confirming address…",
+  "Order placed ✓",
 ];
 
 export const Route = createFileRoute("/")({
@@ -39,30 +39,8 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-const OPERATORS = [
-  { id: 1, x: 12, scale: 0.55, delay: 0 },
-  { id: 2, x: 30, scale: 0.7, delay: 1.2 },
-  { id: 3, x: 50, scale: 1.0, delay: 0.6 },
-  { id: 4, x: 70, scale: 0.72, delay: 1.8 },
-  { id: 5, x: 88, scale: 0.58, delay: 0.3 },
-];
-
 function HomePage() {
   const [talking, setTalking] = useState(false);
-  const [stageIdx, setStageIdx] = useState(0);
-  // The "central" operator (id: 3) lights up. Easy to swap by random pick later.
-  const activeId = talking ? 3 : null;
-
-  useEffect(() => {
-    if (!talking) {
-      setStageIdx(0);
-      return;
-    }
-    const t = setInterval(() => {
-      setStageIdx((s) => (s + 1) % STAGE_LINES.length);
-    }, 1800);
-    return () => clearInterval(t);
-  }, [talking]);
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -108,197 +86,223 @@ function HomePage() {
       {/* CALL-CENTER STAGE */}
       <main className="relative z-10 mx-auto max-w-7xl px-5 pb-24 sm:px-8">
         <section
-          aria-label="Виртуальный колл-центр"
-          className="relative h-[420px] w-full overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-panel)] sm:h-[480px]"
+          aria-label="SayPharma call-center"
+          className="relative aspect-[2026/1051] w-full overflow-hidden rounded-3xl border border-border shadow-[var(--shadow-panel)] [container-type:inline-size]"
         >
-          {/* Premium neon call-center photographic backdrop */}
+          {/* Enhanced photographic backdrop */}
           <img
-            src={callCenterBg}
-            alt="Команда операторов SayPharma в неоновом колл-центре"
-            loading="lazy"
-            width={1920}
-            height={1080}
+            src={callCenterEn}
+            alt="SayPharma neon call-center with a live operator"
+            width={2026}
+            height={1051}
             className="absolute inset-0 h-full w-full object-cover"
           />
 
-          {/* Color grade + depth wash */}
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,oklch(0.10_0.04_252/0.55)_75%,oklch(0.08_0.03_252/0.85)_100%)]" />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-background/40" />
-
-          {/* Aurora + scanlines for luminescent atmosphere */}
-          <div className="pointer-events-none absolute -inset-10 aurora animate-aurora opacity-40 mix-blend-screen" />
-          <div className="pointer-events-none absolute inset-0 scanlines opacity-30 mix-blend-overlay" />
-
-          {/* Drifting bokeh particles */}
+          {/* Atmosphere wash */}
           <div
-            className="pointer-events-none absolute inset-0 opacity-70 animate-aurora mix-blend-screen"
+            className="pointer-events-none absolute inset-0"
             style={{
               background:
-                "radial-gradient(2px 2px at 18% 30%, oklch(0.92 0.18 200 / 0.9), transparent 60%), radial-gradient(1.5px 1.5px at 72% 22%, oklch(0.88 0.20 290 / 0.7), transparent 60%), radial-gradient(2px 2px at 35% 78%, oklch(0.90 0.18 195 / 0.8), transparent 60%), radial-gradient(1.5px 1.5px at 88% 65%, oklch(0.85 0.18 220 / 0.7), transparent 60%), radial-gradient(2px 2px at 55% 45%, oklch(0.92 0.20 200 / 0.6), transparent 60%)",
+                "radial-gradient(ellipse 40% 60% at 74% 50%, rgba(50,230,255,.10), transparent 60%), radial-gradient(ellipse 60% 50% at 30% 40%, rgba(255,60,60,.06), transparent 60%)",
             }}
           />
 
-          {/* Darken only the other operators — keep the existing monitors alive */}
+          {/* Wall sign (always visible) */}
           <div
-            className={`pointer-events-none absolute inset-0 transition-opacity duration-700 ${
-              activeId ? "opacity-100" : "opacity-0"
-            }`}
+            className="absolute font-extrabold uppercase text-[#e9f8ff]"
             style={{
-              background:
-                "radial-gradient(ellipse 12% 22% at 68% 48%, oklch(0.03 0.02 252 / 0.74), transparent 74%), radial-gradient(ellipse 11% 18% at 58% 47%, oklch(0.03 0.02 252 / 0.60), transparent 76%), radial-gradient(ellipse 14% 36% at 94% 50%, oklch(0.03 0.02 252 / 0.58), transparent 76%), linear-gradient(to right, transparent 0%, transparent 48%, oklch(0.04 0.03 252 / 0.18) 72%, transparent 100%)",
-            }}
-          />
-
-          {/* Bright duplicate of the nearest operator — real image stays visible and stronger */}
-          <img
-            src={callCenterBg}
-            alt=""
-            aria-hidden="true"
-            className={`pointer-events-none absolute transition-opacity duration-500 ${
-              activeId ? "opacity-100" : "opacity-0"
-            }`}
-            style={{
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              filter: "brightness(2.25) contrast(1.42) saturate(2.05)",
-              clipPath: "ellipse(14% 40% at 79% 50%)",
-              mixBlendMode: "screen",
-            }}
-          />
-
-          {/* Bright cyan-green rim glow on top (keeps her visible and selected) */}
-          <div
-            className={`pointer-events-none absolute transition-opacity duration-700 animate-breath ${
-              activeId ? "opacity-100" : "opacity-0"
-            }`}
-            style={{
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              background:
-                "radial-gradient(ellipse 11% 26% at 79% 49%, oklch(0.98 0.30 176 / 0.72), transparent 70%), radial-gradient(ellipse 17% 42% at 79% 52%, transparent 14%, oklch(0.92 0.31 166 / 0.74) 48%, oklch(0.76 0.25 198 / 0.36) 70%, transparent 88%)",
-              filter: "blur(9px)",
-              mixBlendMode: "screen",
-            }}
-          />
-
-          {/* Vertical neon beam from ceiling onto her */}
-          <div
-            className={`pointer-events-none absolute top-0 h-[60%] w-[14%] transition-opacity duration-700 ${
-              activeId ? "opacity-70" : "opacity-0"
-            }`}
-            style={{
-              right: "14%",
-              background:
-                "linear-gradient(to bottom, oklch(0.95 0.28 170 / 0.55) 0%, oklch(0.85 0.26 160 / 0.25) 50%, transparent 95%)",
-              filter: "blur(16px)",
-              mixBlendMode: "screen",
-            }}
-          />
-
-          {/* Her glowing realistic monitor with running status text */}
-          <div
-            className={`pointer-events-none absolute transition-all duration-500 ${
-              activeId ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-            }`}
-            style={{
-              left: "35%",
-              bottom: "3%",
-              width: "min(35%, 340px)",
-              minWidth: "132px",
-              aspectRatio: "16 / 9",
-              perspective: "1200px",
-              zIndex: 6,
+              left: "13.5%",
+              top: "40.5%",
+              width: "31%",
+              lineHeight: 1.12,
+              fontSize: "3.4cqw",
+              letterSpacing: ".01em",
+              textShadow: "0 0 0.5cqw rgba(110,220,255,.65), 0 0 0.15cqw rgba(255,255,255,.6)",
             }}
           >
-            {/* Monitor body */}
-            <div
-              className="relative h-full w-full rounded-[14px] p-[7px]"
-              style={{
-                background:
-                  "linear-gradient(160deg, #343a44 0%, #171b22 48%, #080a0f 100%)",
-                boxShadow:
-                  "0 26px 46px rgba(0,0,0,0.68), 0 0 70px oklch(0.92 0.30 170 / 0.82), 0 0 150px oklch(0.82 0.28 195 / 0.46), inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -10px 18px rgba(0,0,0,0.45)",
-                transform: "rotateY(8deg) rotateX(4deg)",
-              }}
-            >
-              {/* Screen */}
-              <div
-                className="relative h-full w-full overflow-hidden rounded-[7px] animate-screen-flicker"
-                style={{
-                  background:
-                    "radial-gradient(circle at 68% 38%, rgba(65,255,213,0.30), transparent 42%), linear-gradient(135deg, #06251c 0%, #0a3b2d 54%, #03130f 100%)",
-                  boxShadow:
-                    "inset 0 0 28px oklch(0.98 0.30 165 / 0.62), inset 0 0 70px oklch(0.84 0.28 198 / 0.38)",
-                }}
-              >
-                {/* Scanlines on screen */}
-                <div className="absolute inset-0 scanlines opacity-40 mix-blend-overlay" />
-                {/* Glare */}
-                <div
-                  className="pointer-events-none absolute inset-0"
-                  style={{
-                    background:
-                      "linear-gradient(115deg, rgba(255,255,255,0.10) 0%, transparent 40%, transparent 70%, rgba(255,255,255,0.04) 100%)",
-                  }}
-                />
-                <div className="relative flex h-full flex-col justify-between p-3 sm:p-4">
-                  <div className="flex items-center gap-1.5">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.95_0.30_30)] animate-breath" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.92_0.22_90)]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-[oklch(0.92_0.25_150)]" />
-                    <span className="ml-1 font-mono text-[clamp(6px,1.15vw,10px)] uppercase tracking-[0.22em] text-[oklch(0.90_0.20_165)]">
-                      SayPharma · Console
-                    </span>
-                  </div>
-                  <div className="relative mt-1 min-h-[54px] overflow-hidden font-mono text-[clamp(9px,1.8vw,14px)] leading-relaxed text-[oklch(0.96_0.22_160)] sm:min-h-[78px]">
-                    {[0, 1, 2].map((offset) => {
-                      const line = STAGE_LINES[(stageIdx + offset) % STAGE_LINES.length];
-                      return (
-                        <div
-                          key={`${line}-${offset}`}
-                          className={`transition-all duration-500 ${offset === 0 ? "opacity-100" : "opacity-55"}`}
-                          style={{ transform: `translateX(${offset * 9}px)` }}
-                        >
-                          <span className="text-[oklch(0.82_0.22_170)]">&gt; </span>
-                          {line}
-                          {offset === 0 ? <span className="animate-caret">▌</span> : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div className="h-1 w-full overflow-hidden rounded-full bg-[oklch(0.30_0.08_180/0.45)]">
-                    <div
-                      className="h-full transition-all duration-700"
-                      style={{
-                        width: `${((stageIdx + 1) / STAGE_LINES.length) * 100}%`,
-                        background:
-                          "linear-gradient(to right, oklch(0.95 0.32 165), oklch(0.88 0.26 200))",
-                        boxShadow: "0 0 10px oklch(0.95 0.32 165)",
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-              {/* Bezel chin with brand dot */}
-              <div className="absolute inset-x-0 bottom-0 flex translate-y-[55%] items-center justify-center">
-                <span className="h-2 w-2 rounded-full bg-[oklch(0.88_0.24_165)] shadow-[0_0_12px_oklch(0.88_0.24_165)]" />
-              </div>
-            </div>
-            {/* Stand */}
-            <div className="mx-auto h-7 w-[12%] bg-gradient-to-b from-[#20242b] to-[#07090d] shadow-[0_0_18px_oklch(0.82_0.24_180/0.22)]" />
-            <div className="mx-auto h-2.5 w-[54%] rounded-full bg-gradient-to-b from-[#20242b] to-[#05060a] shadow-[0_10px_28px_rgba(0,0,0,0.78),0_0_32px_oklch(0.82_0.24_180/0.32)]" />
-            <div className="mx-auto -mt-1 h-3 w-[78%] rounded-full bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.58),transparent_70%)] blur-sm" />
+            Your order is
+            <br />
+            our priority
           </div>
 
-          {/* Top neon ceiling strip */}
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[oklch(0.88_0.20_195/0.9)] to-transparent shadow-[0_0_30px_oklch(0.88_0.20_195/0.7)]" />
+          {/* ===== ACTIVE STATE: the selected operator lights up ===== */}
+          {/* Brightened + masked operator (pulsing brightness "beat") */}
+          <img
+            src={callCenterEn}
+            alt=""
+            aria-hidden="true"
+            className={`pointer-events-none absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+              talking ? "opacity-100 animate-sp-beat" : "opacity-0"
+            }`}
+            style={{
+              WebkitMaskImage:
+                "radial-gradient(ellipse 15% 48% at 74% 56%, #000 52%, transparent 82%)",
+              maskImage:
+                "radial-gradient(ellipse 15% 48% at 74% 56%, #000 52%, transparent 82%)",
+            }}
+          />
+          {/* Teal-blue tint on her */}
+          <div
+            className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
+              talking ? "opacity-50" : "opacity-0"
+            }`}
+            style={{
+              mixBlendMode: "soft-light",
+              background: "linear-gradient(180deg,#37f5d6,#46b6ff)",
+              WebkitMaskImage:
+                "radial-gradient(ellipse 14% 46% at 74% 55%, #000 48%, transparent 82%)",
+              maskImage:
+                "radial-gradient(ellipse 14% 46% at 74% 55%, #000 48%, transparent 82%)",
+            }}
+          />
+          {/* Neon bloom on her (pulsing) */}
+          <div
+            className={`pointer-events-none absolute inset-0 transition-opacity duration-500 ${
+              talking ? "opacity-100 animate-sp-pulse" : "opacity-0"
+            }`}
+            style={{
+              mixBlendMode: "screen",
+              filter: "blur(1.4cqw)",
+              background:
+                "radial-gradient(ellipse 11% 34% at 74% 50%, rgba(64,245,220,.6), rgba(60,170,255,.22) 55%, transparent 74%)",
+            }}
+          />
+          {/* Crisp rim / backlight crescent (pulsing) */}
+          <div
+            className={`pointer-events-none absolute transition-opacity duration-500 ${
+              talking ? "opacity-100 animate-sp-pulse" : "opacity-0"
+            }`}
+            style={{
+              left: "75%",
+              top: "40%",
+              width: "18%",
+              height: "52%",
+              transform: "translate(-50%,-50%)",
+              mixBlendMode: "screen",
+              filter: "blur(0.4cqw)",
+              background:
+                "radial-gradient(closest-side, transparent 56%, #6bffe0 70%, #46c8ff 80%, transparent 88%)",
+            }}
+          />
 
-          {/* Floor caption */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground/70">
-            saypharma · operations floor
+          {/* Running English console on HER monitor (active) */}
+          <div
+            className={`absolute overflow-hidden border transition-opacity duration-500 ${
+              talking ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              left: "43.4%",
+              top: "50.6%",
+              width: "17.6%",
+              height: "24.4%",
+              borderRadius: "0.4cqw",
+              borderColor: "#2ff5c977",
+              transform: "perspective(80cqw) rotateY(-9deg)",
+              transformOrigin: "right center",
+              background: "linear-gradient(135deg,#05241b,#073b2c 60%,#031410)",
+              boxShadow: "0 0 1.4cqw #2ff5c9aa, inset 0 0 1.6cqw #2ff5c955",
+            }}
+          >
+            <div
+              className="flex items-center border-b"
+              style={{ gap: "0.3cqw", padding: "0.3cqw 0.5cqw", borderColor: "#1c5a47" }}
+            >
+              <span className="rounded-full" style={{ width: "0.7cqw", height: "0.7cqw", background: "#ff5f6d" }} />
+              <span className="rounded-full" style={{ width: "0.7cqw", height: "0.7cqw", background: "#ffd24a" }} />
+              <span className="rounded-full" style={{ width: "0.7cqw", height: "0.7cqw", background: "#3dffce" }} />
+              <b
+                className="font-mono uppercase"
+                style={{ marginLeft: "0.4cqw", fontSize: "1.05cqw", letterSpacing: ".12em", color: "#9affdf" }}
+              >
+                SayPharma · Live
+              </b>
+            </div>
+            <div
+              className="relative overflow-hidden"
+              style={{
+                height: "calc(100% - 2.6cqw)",
+                padding: "0.4cqw 0.7cqw",
+                WebkitMaskImage: "linear-gradient(transparent, #000 16%, #000 84%, transparent)",
+                maskImage: "linear-gradient(transparent, #000 16%, #000 84%, transparent)",
+              }}
+            >
+              <div className="animate-sp-marquee">
+                {[...STAGE_LINES, ...STAGE_LINES].map((line, i) => (
+                  <div
+                    key={i}
+                    className="whitespace-nowrap font-mono"
+                    style={{
+                      fontSize: "1.45cqw",
+                      lineHeight: 1.85,
+                      color: i % STAGE_LINES.length === 0 ? "#eafff7" : "#7ff0c8",
+                      textShadow: "0 0 0.5cqw #34f5c8aa",
+                    }}
+                  >
+                    &gt; {line}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Brand bar with neon-framed red cross (always visible) */}
+          <div
+            className="absolute left-1/2 flex -translate-x-1/2 items-center rounded-full backdrop-blur"
+            style={{
+              top: "4%",
+              gap: "1.6cqw",
+              padding: "1.1cqw 3.2cqw",
+              background: "rgba(4,16,22,.55)",
+              border: "0.22cqw solid #46f5e0",
+              boxShadow: "0 0 2.4cqw #2ff5c9aa, inset 0 0 1.8cqw #2ff5c955",
+            }}
+          >
+            <span className="relative inline-block" style={{ width: "3.4cqw", height: "3.4cqw" }}>
+              <span
+                className="absolute"
+                style={{ left: "40%", top: 0, width: "20%", height: "100%", borderRadius: "0.3cqw", background: "#ff3b3b", boxShadow: "0 0 1.4cqw #ff3b3b" }}
+              />
+              <span
+                className="absolute"
+                style={{ top: "40%", left: 0, height: "20%", width: "100%", borderRadius: "0.3cqw", background: "#ff3b3b", boxShadow: "0 0 1.4cqw #ff3b3b" }}
+              />
+            </span>
+            <b
+              className="font-display font-extrabold text-[#eaffff]"
+              style={{ fontSize: "3.1cqw", textShadow: "0 0 1.4cqw #46f5e0aa" }}
+            >
+              SayPharma
+            </b>
+            <span
+              className="font-mono uppercase"
+              style={{ fontSize: "1.5cqw", letterSpacing: ".18em", color: "#7ff0d8" }}
+            >
+              Pharmacy 24/7
+            </span>
+          </div>
+
+          {/* LISTENING chip (active) */}
+          <div
+            className={`absolute flex items-center rounded-full font-mono uppercase transition-opacity duration-500 ${
+              talking ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              left: "2.4cqw",
+              bottom: "2.4cqw",
+              gap: "1.2cqw",
+              padding: "0.9cqw 2cqw",
+              fontSize: "1.5cqw",
+              letterSpacing: ".12em",
+              color: "#7ff0d8",
+              background: "rgba(4,19,26,.66)",
+              border: "0.2cqw solid #2ff5c955",
+            }}
+          >
+            <span
+              className="rounded-full animate-sp-pulse"
+              style={{ width: "1.2cqw", height: "1.2cqw", background: "#46ffd0", boxShadow: "0 0 1.4cqw #46ffd0" }}
+            />
+            Listening · operator speaking
           </div>
         </section>
 
@@ -376,8 +380,6 @@ function HomePage() {
             <LiveMonitor running={talking} />
           </div>
         </div>
-
-
 
         {/* HOW IT WORKS */}
         <section id="how" className="mt-24">
