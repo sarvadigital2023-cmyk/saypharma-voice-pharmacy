@@ -135,7 +135,7 @@ function SettingsPage() {
       </div>
 
       {/* Header */}
-      <header className="relative z-40 mx-auto flex max-w-3xl items-center justify-between px-5 py-5 sm:px-8">
+      <header className="relative z-40 mx-auto flex max-w-3xl items-center justify-between px-5 pb-5 pt-safe sm:px-8">
         <Link
           to="/"
           className="inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3.5 py-2 text-sm font-medium text-muted-foreground backdrop-blur transition hover:border-primary/50 hover:text-foreground"

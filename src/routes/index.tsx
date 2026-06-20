@@ -77,7 +77,7 @@ function HomePage() {
       </div>
 
       {/* Top nav */}
-      <header className="relative z-40 mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+      <header className="relative z-40 mx-auto flex max-w-7xl items-center justify-between px-5 pb-5 pt-safe sm:px-8">
         <a href="/" className="flex items-center gap-2.5">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[var(--shadow-glow)]">
             <Pill className="h-4 w-4" />

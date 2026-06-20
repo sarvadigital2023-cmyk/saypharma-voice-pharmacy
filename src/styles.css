@@ -4,6 +4,16 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* iOS / PWA safe-area helpers — keep content clear of the status bar,
+   notch and home indicator (requires viewport-fit=cover, set in __root).
+   pt-safe = the normal top padding plus the device's top inset. */
+@utility pt-safe {
+  padding-top: calc(env(safe-area-inset-top) + 1.25rem);
+}
+@utility pb-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 1.25rem);
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
