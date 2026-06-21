@@ -41,8 +41,14 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
+const LANGUAGE_NAME: Record<string, string> = {
+  ru: "Russian",
+  uk: "Ukrainian",
+  en: "English",
+};
+
 function HomePage() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const voice = useVoiceAgent();
   const talking = voice.isLive;
   const active = talking || voice.isConnecting;
@@ -316,7 +322,9 @@ function HomePage() {
             {/* The CTA */}
             <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <button
-                onClick={() => (voice.isLive ? voice.stop() : voice.start())}
+                onClick={() =>
+                  voice.isLive ? voice.stop() : voice.start(LANGUAGE_NAME[locale] ?? "English")
+                }
                 aria-busy={voice.isConnecting}
                 className={`group relative inline-flex items-center gap-3 rounded-full px-7 py-4 text-sm font-semibold transition-all ${
                   active
