@@ -1,49 +1,60 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type Vapi from "@vapi-ai/web";
+import type { RetellWebClient } from "retell-client-js-sdk";
 
-import { buildAssistant } from "./voice-agent";
+import { createWebCall } from "./retell";
 
 export type VoiceStatus = "idle" | "connecting" | "live" | "error";
 export type VoiceError = "not-configured" | "mic" | "failed" | null;
 
 /**
- * Drives a Vapi web voice call with the inline "Cimo" assistant.
- * The Vapi SDK is browser-only, so it is loaded lazily (never during SSR).
+ * Drives a Retell web voice call (agent "Cimo").
+ *
+ * start(): mints a token via the server fn, then opens the WebRTC call with
+ * the Retell web SDK (loaded lazily so it never runs during SSR).
+ * stop():  ends the call.
  */
 export function useVoiceAgent() {
-  const vapiRef = useRef<Vapi | null>(null);
+  const clientRef = useRef<RetellWebClient | null>(null);
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [error, setError] = useState<VoiceError>(null);
 
   const ensureClient = useCallback(async () => {
-    if (vapiRef.current) return vapiRef.current;
-    const key = import.meta.env.VITE_VAPI_PUBLIC_KEY;
-    if (!key) throw new Error("VAPI_NOT_CONFIGURED");
-    const { default: VapiClient } = await import("@vapi-ai/web");
-    const vapi = new VapiClient(key);
-    vapi.on("call-start", () => setStatus("live"));
-    vapi.on("call-end", () => setStatus("idle"));
-    vapi.on("error", (e: unknown) => {
-      console.error("Vapi call error:", e);
+    if (clientRef.current) return clientRef.current;
+    const { RetellWebClient } = await import("retell-client-js-sdk");
+    const client = new RetellWebClient();
+    client.on("call_started", () => setStatus("live"));
+    client.on("call_ended", () => setStatus("idle"));
+    client.on("error", (e: unknown) => {
+      console.error("Retell call error:", e);
       setError("failed");
       setStatus("error");
+      try {
+        client.stopCall();
+      } catch {
+        /* ignore */
+      }
     });
-    vapiRef.current = vapi;
-    return vapi;
+    clientRef.current = client;
+    return client;
   }, []);
 
   const start = useCallback(
-    async (languageName: string) => {
+    async (language?: string) => {
       setError(null);
       setStatus("connecting");
       try {
-        const vapi = await ensureClient();
-        await vapi.start(buildAssistant(languageName) as Parameters<Vapi["start"]>[0]);
+        const client = await ensureClient();
+        const { accessToken } = await createWebCall({ data: { language } });
+        await client.startCall({ accessToken });
       } catch (e) {
         console.error(e);
         const message = e instanceof Error ? e.message : String(e);
-        if (message.includes("VAPI_NOT_CONFIGURED")) setError("not-configured");
-        else if (/permission|microphone|denied|notallowed/i.test(message)) setError("mic");
+        if (message.includes("RETELL_NOT_CONFIGURED")) setError("not-configured");
+        else if (
+          message.toLowerCase().includes("permission") ||
+          message.toLowerCase().includes("microphone")
+        )
+          setError("mic");
         else setError("failed");
         setStatus("error");
       }
@@ -53,7 +64,7 @@ export function useVoiceAgent() {
 
   const stop = useCallback(() => {
     try {
-      vapiRef.current?.stop();
+      clientRef.current?.stopCall();
     } catch {
       /* ignore */
     }
@@ -63,7 +74,7 @@ export function useVoiceAgent() {
   useEffect(
     () => () => {
       try {
-        vapiRef.current?.stop();
+        clientRef.current?.stopCall();
       } catch {
         /* ignore */
       }
