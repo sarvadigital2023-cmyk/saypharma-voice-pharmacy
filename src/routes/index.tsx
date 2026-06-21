@@ -5,6 +5,7 @@ import { Link } from "@tanstack/react-router";
 import { LiveMonitor } from "@/components/operator-scene";
 import callCenterEn from "@/assets/call-center-en.jpg";
 import { useI18n } from "@/i18n";
+import { useVoiceAgent } from "@/lib/use-voice-agent";
 
 const STAGE_LINES = [
   "Processing order…",
@@ -42,7 +43,17 @@ export const Route = createFileRoute("/")({
 
 function HomePage() {
   const { t } = useI18n();
-  const [talking, setTalking] = useState(false);
+  const voice = useVoiceAgent();
+  const talking = voice.isLive;
+  const active = talking || voice.isConnecting;
+  const voiceError =
+    voice.error === "not-configured"
+      ? t("voice.notConfigured")
+      : voice.error === "mic"
+        ? t("voice.mic")
+        : voice.error
+          ? t("voice.failed")
+          : null;
   const [chatValue, setChatValue] = useState("");
   const [chatFocused, setChatFocused] = useState(false);
 
@@ -305,16 +316,17 @@ function HomePage() {
             {/* The CTA */}
             <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <button
-                onClick={() => setTalking((t) => !t)}
+                onClick={() => (voice.isLive ? voice.stop() : voice.start())}
+                aria-busy={voice.isConnecting}
                 className={`group relative inline-flex items-center gap-3 rounded-full px-7 py-4 text-sm font-semibold transition-all ${
-                  talking
+                  active
                     ? "bg-card text-foreground glow-ring"
                     : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02]"
                 }`}
               >
                 <span
                   className={`relative grid h-9 w-9 place-items-center rounded-full ${
-                    talking ? "bg-primary/20 pulse-ring" : "bg-white/15"
+                    active ? "bg-primary/20 pulse-ring" : "bg-white/15"
                   }`}
                 >
                   {talking ? (
@@ -323,11 +335,19 @@ function HomePage() {
                     <Mic className="h-4 w-4" />
                   )}
                 </span>
-                {talking ? t("home.cta.stop") : t("home.cta.start")}
+                {voice.isConnecting
+                  ? t("home.cta.connecting")
+                  : talking
+                    ? t("home.cta.stop")
+                    : t("home.cta.start")}
               </button>
 
-              <span className="text-xs text-muted-foreground">
-                {talking ? t("home.caption.talking") : t("home.caption.idle")}
+              <span className={`text-xs ${voiceError ? "text-destructive" : "text-muted-foreground"}`}>
+                {voice.isConnecting
+                  ? t("home.caption.connecting")
+                  : talking
+                    ? t("home.caption.talking")
+                    : voiceError ?? t("home.caption.idle")}
               </span>
             </div>
 

@@ -54,6 +54,12 @@ export const messages: Record<Locale, Messages> = {
     "chat.greeting": "Здравствуйте! Чем могу помочь?",
     "chat.send": "Отправить",
 
+    "home.cta.connecting": "Подключаюсь…",
+    "home.caption.connecting": "Соединение с агентом…",
+    "voice.notConfigured": "Голосовой агент ещё не подключён.",
+    "voice.mic": "Разрешите доступ к микрофону.",
+    "voice.failed": "Не удалось начать разговор. Попробуйте ещё раз.",
+
     "how.title": "Три шага вместо корзины",
     "how.subtitle": "Никаких карточек, фильтров и форм оплаты — всё решается в разговоре.",
     "how.s1.t": "Скажите, что нужно",
@@ -147,6 +153,12 @@ export const messages: Record<Locale, Messages> = {
     "chat.greeting": "Вітаю! Чим можу допомогти?",
     "chat.send": "Надіслати",
 
+    "home.cta.connecting": "Підключаюсь…",
+    "home.caption.connecting": "З'єднання з агентом…",
+    "voice.notConfigured": "Голосовий агент ще не підключений.",
+    "voice.mic": "Дозвольте доступ до мікрофона.",
+    "voice.failed": "Не вдалося почати розмову. Спробуйте ще раз.",
+
     "how.title": "Три кроки замість кошика",
     "how.subtitle": "Жодних карток, фільтрів і форм оплати — усе вирішується в розмові.",
     "how.s1.t": "Скажіть, що потрібно",
@@ -239,6 +251,12 @@ export const messages: Record<Locale, Messages> = {
     "chat.placeholder": "Ask the agent…",
     "chat.greeting": "Hi! How can I help you?",
     "chat.send": "Send",
+
+    "home.cta.connecting": "Connecting…",
+    "home.caption.connecting": "Connecting to the agent…",
+    "voice.notConfigured": "Voice agent is not configured yet.",
+    "voice.mic": "Please allow microphone access.",
+    "voice.failed": "Couldn't start the call. Please try again.",
 
     "how.title": "Three steps instead of a cart",
     "how.subtitle": "No cards, filters or payment forms — everything is handled in the conversation.",
