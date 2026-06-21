@@ -38,29 +38,26 @@ export function useVoiceAgent() {
     return client;
   }, []);
 
-  const start = useCallback(
-    async (language?: string) => {
-      setError(null);
-      setStatus("connecting");
-      try {
-        const client = await ensureClient();
-        const { accessToken } = await createWebCall({ data: { language } });
-        await client.startCall({ accessToken });
-      } catch (e) {
-        console.error(e);
-        const message = e instanceof Error ? e.message : String(e);
-        if (message.includes("RETELL_NOT_CONFIGURED")) setError("not-configured");
-        else if (
-          message.toLowerCase().includes("permission") ||
-          message.toLowerCase().includes("microphone")
-        )
-          setError("mic");
-        else setError("failed");
-        setStatus("error");
-      }
-    },
-    [ensureClient],
-  );
+  const start = useCallback(async () => {
+    setError(null);
+    setStatus("connecting");
+    try {
+      const client = await ensureClient();
+      const { accessToken } = await createWebCall();
+      await client.startCall({ accessToken });
+    } catch (e) {
+      console.error(e);
+      const message = e instanceof Error ? e.message : String(e);
+      if (message.includes("RETELL_NOT_CONFIGURED")) setError("not-configured");
+      else if (
+        message.toLowerCase().includes("permission") ||
+        message.toLowerCase().includes("microphone")
+      )
+        setError("mic");
+      else setError("failed");
+      setStatus("error");
+    }
+  }, [ensureClient]);
 
   const stop = useCallback(() => {
     try {
