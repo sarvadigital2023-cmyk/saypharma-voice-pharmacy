@@ -320,7 +320,7 @@ function HomePage() {
                   voice.isLive ? voice.stop() : voice.start()
                 }
                 aria-busy={voice.isConnecting}
-                className={`group relative inline-flex items-center gap-3 rounded-full px-7 py-4 text-sm font-semibold transition-all ${
+                className={`group relative inline-flex min-w-[19.5rem] items-center justify-center gap-3 rounded-full px-7 py-4 text-sm font-semibold transition-all ${
                   active
                     ? "bg-card text-foreground glow-ring"
                     : "bg-gradient-to-br from-primary to-accent text-primary-foreground shadow-[var(--shadow-glow)] hover:scale-[1.02]"
