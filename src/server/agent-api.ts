@@ -49,8 +49,24 @@ function asObject(value: unknown): Record<string, unknown> {
 }
 
 function num(value: unknown): number | null {
-  if (value == null || value === "") return null;
-  const n = Number(value);
+  if (value == null) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "boolean") return null;
+  // Parse human/locale strings like "5,00", "6.00 грн", "1 234,56", "₴5".
+  let s = String(value).trim();
+  if (!s) return null;
+  s = s.replace(/[^\d.,-]/g, ""); // drop currency symbols, spaces, letters
+  if (!s) return null;
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+  if (hasComma && hasDot) {
+    // whichever separator is last is the decimal one; the other is grouping
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
+    else s = s.replace(/,/g, "");
+  } else if (hasComma) {
+    s = s.replace(",", "."); // comma decimal: "5,00" -> "5.00"
+  }
+  const n = Number(s);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -79,10 +95,22 @@ function resolvePrices(p: Record<string, unknown>) {
     num(p.base_price);
   const base = num(p.price);
   // the price the customer actually pays (prefer the gross/with-VAT figure)
-  const charge = withVat ?? base ?? withoutVat;
+  let charge = withVat ?? base ?? withoutVat;
+  if (charge == null) {
+    // last resort: first money-looking numeric column under any name
+    for (const [k, v] of Object.entries(p)) {
+      if (!/(price|vat|cost|amount|sum|sell|retail)/i.test(k)) continue;
+      const n = num(v);
+      if (n != null) {
+        charge = n;
+        break;
+      }
+    }
+  }
   return {
     price: base ?? charge,
-    price_with_vat: withVat,
+    // always give the agent a "to pay" figure so it never reports "no price"
+    price_with_vat: withVat ?? charge,
     price_without_vat: withoutVat,
     charge,
   };
