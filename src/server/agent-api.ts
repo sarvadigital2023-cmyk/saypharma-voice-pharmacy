@@ -201,10 +201,13 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
 // ---------------------------------------------------------------- router
 
 export async function handleAgentApi(request: Request, url: URL): Promise<Response> {
-  // shared-secret auth (enforced only when AGENT_TOOL_SECRET is set)
+  // shared-secret auth (enforced only when AGENT_TOOL_SECRET is set).
+  // Accepts the secret via the "x-agent-secret" header OR a "?k=" query param,
+  // so Retell tools can authenticate without custom headers.
   const secret = process.env.AGENT_TOOL_SECRET;
-  if (secret && request.headers.get("x-agent-secret") !== secret) {
-    return json({ error: "unauthorized" }, 401);
+  if (secret) {
+    const provided = request.headers.get("x-agent-secret") ?? url.searchParams.get("k");
+    if (provided !== secret) return json({ error: "unauthorized" }, 401);
   }
 
   const supabase = getClient();
