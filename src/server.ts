@@ -39,6 +39,23 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // Retell agent tool-call endpoints — handled here so they work regardless
+    // of the framework's route discovery. Everything else falls through to the
+    // TanStack app below.
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/api/agent/")) {
+      try {
+        const { handleAgentApi } = await import("./server/agent-api");
+        return await handleAgentApi(request, url);
+      } catch (error) {
+        console.error(error);
+        return new Response(JSON.stringify({ error: "agent_api_error" }), {
+          status: 500,
+          headers: { "content-type": "application/json; charset=utf-8" },
+        });
+      }
+    }
+
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
