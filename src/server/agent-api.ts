@@ -48,6 +48,72 @@ function asObject(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
 }
 
+function num(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+function str(value: unknown): string | null {
+  return value == null || value === "" ? null : String(value);
+}
+
+// The catalog may store prices/origin under different column names depending on
+// how the admin set the table up (e.g. price vs price_with_vat vs gross_price,
+// country vs manufacturer_country). Resolve them tolerantly so the agent always
+// gets a value, and also pass through the raw catalog columns below as a backstop.
+
+function resolvePrices(p: Record<string, unknown>) {
+  const withVat =
+    num(p.price_with_vat) ??
+    num(p.price_vat) ??
+    num(p.price_incl_vat) ??
+    num(p.price_with_tax) ??
+    num(p.gross_price) ??
+    num(p.retail_price);
+  const withoutVat =
+    num(p.price_without_vat) ??
+    num(p.price_no_vat) ??
+    num(p.price_excl_vat) ??
+    num(p.net_price) ??
+    num(p.base_price);
+  const base = num(p.price);
+  // the price the customer actually pays (prefer the gross/with-VAT figure)
+  const charge = withVat ?? base ?? withoutVat;
+  return {
+    price: base ?? charge,
+    price_with_vat: withVat,
+    price_without_vat: withoutVat,
+    charge,
+  };
+}
+
+function resolveCountry(p: Record<string, unknown>): string | null {
+  return str(
+    p.manufacturer_country ??
+      p.country_of_origin ??
+      p.country ??
+      p.origin_country ??
+      p.made_in ??
+      p.origin,
+  );
+}
+
+function resolveManufacturer(p: Record<string, unknown>): string | null {
+  return str(p.manufacturer ?? p.producer ?? p.brand ?? p.vendor ?? p.maker);
+}
+
+/** Backstop: surface every catalog column that looks price/origin related, under
+ * its real name, so the agent can read it even if the resolvers above miss it. */
+function catalogDetails(p: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(p)) {
+    if (v == null || v === "") continue;
+    if (/(price|vat|tax|country|origin|manufact|producer|brand|made_in)/i.test(k)) out[k] = v;
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- tools
 
 async function searchProducts(supabase: SupabaseClient, args: Record<string, unknown>) {
@@ -55,10 +121,8 @@ async function searchProducts(supabase: SupabaseClient, args: Record<string, unk
   // strip characters that have meaning inside a PostgREST or() filter
   const q = raw.replace(/[,()*%]/g, " ").trim();
 
-  let query = supabase
-    .from("products")
-    .select("id,name,active_substance,form,dosage,price,prescription_required,description")
-    .limit(10);
+  // select everything so we never miss a price/origin column the admin added
+  let query = supabase.from("products").select("*").limit(10);
   if (q) query = query.or(`name.ilike.%${q}%,active_substance.ilike.%${q}%`);
 
   const { data, error } = await query;
@@ -74,16 +138,22 @@ async function searchProducts(supabase: SupabaseClient, args: Record<string, unk
     products: products.map((p) => {
       const inStock = stocks.get(String(p.id)) ?? 0;
       const rx = Boolean(p.prescription_required);
+      const prices = resolvePrices(p);
       return {
         product_id: p.id,
         name: p.name,
         active_substance: p.active_substance,
         form: p.form,
         dosage: p.dosage,
-        price: p.price,
+        manufacturer: resolveManufacturer(p),
+        country: resolveCountry(p),
+        price: prices.price,
+        price_with_vat: prices.price_with_vat,
+        price_without_vat: prices.price_without_vat,
         prescription_required: rx,
         in_stock: inStock,
         available: inStock > 0 && !rx,
+        details: catalogDetails(p),
       };
     }),
   });
@@ -133,7 +203,7 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
   const ids = [...new Set(items.map((it) => it.product_id))];
   const { data: prodRows, error: prodErr } = await supabase
     .from("products")
-    .select("id,name,price,prescription_required")
+    .select("*")
     .in("id", ids);
   if (prodErr) return json({ error: "db_error" }, 500);
 
@@ -147,11 +217,12 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
     if (!p) return json({ ok: false, reason: "product_not_found", product_id: it.product_id });
     if (Boolean(p.prescription_required))
       return json({ ok: false, reason: "prescription_required", product: p.name });
-    if (p.price == null) return json({ ok: false, reason: "no_price", product: p.name });
+    const charge = resolvePrices(p).charge;
+    if (charge == null) return json({ ok: false, reason: "no_price", product: p.name });
     const inStock = stocks.get(it.product_id) ?? 0;
     if (inStock < it.quantity)
       return json({ ok: false, reason: "insufficient_stock", product: p.name, in_stock: inStock, requested: it.quantity });
-    lines.push({ product_id: it.product_id, name: String(p.name), quantity: it.quantity, price: Number(p.price) });
+    lines.push({ product_id: it.product_id, name: String(p.name), quantity: it.quantity, price: charge });
   }
 
   const total = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
