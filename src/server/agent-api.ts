@@ -19,11 +19,15 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
+let cachedClient: SupabaseClient | null | undefined;
+
 function getClient(): SupabaseClient | null {
+  // Reuse the client across warm invocations so we don't re-init it every call.
+  if (cachedClient !== undefined) return cachedClient;
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key, { auth: { persistSession: false } });
+  cachedClient = url && key ? createClient(url, key, { auth: { persistSession: false } }) : null;
+  return cachedClient;
 }
 
 type Movement = { product_id: string; type: string; quantity: number | null };
@@ -167,39 +171,58 @@ async function searchProducts(supabase: SupabaseClient, args: Record<string, unk
   // strip characters that have meaning inside a PostgREST or() filter
   const q = raw.replace(/[,()*%]/g, " ").trim();
 
-  // select everything so we never miss a price/origin column the admin added
-  let query = supabase.from("products").select("*").limit(10);
+  // MATCHING QUERY — kept identical to the original, proven-stable version:
+  // explicit columns (no SELECT *), whole-phrase ilike, limit 10. This is the
+  // only query that decides whether a product is found.
+  let query = supabase
+    .from("products")
+    .select("id,name,active_substance,form,dosage,price,prescription_required,description")
+    .limit(10);
   if (q) query = query.or(`name.ilike.%${q}%,active_substance.ilike.%${q}%`);
 
   const { data, error } = await query;
   if (error) return json({ error: "db_error" }, 500);
 
   const products = (data ?? []) as Array<Record<string, unknown>>;
-  const stocks = await stockFor(
-    supabase,
-    products.map((p) => String(p.id)),
-  );
+  const ids = products.map((p) => String(p.id));
+
+  // Fetch stock and the full rows (price-with-VAT / country / extra columns) in
+  // PARALLEL, keyed by the already-matched ids — so enrichment adds no latency
+  // over the original search and can never stop a product from being found.
+  const [stocks, fullById] = await Promise.all([
+    stockFor(supabase, ids),
+    (async () => {
+      const map = new Map<string, Record<string, unknown>>();
+      if (ids.length) {
+        const { data: full } = await supabase.from("products").select("*").in("id", ids);
+        for (const row of (full ?? []) as Array<Record<string, unknown>>) map.set(String(row.id), row);
+      }
+      return map;
+    })(),
+  ]);
 
   return json({
     products: products.map((p) => {
-      const inStock = stocks.get(String(p.id)) ?? 0;
-      const rx = Boolean(p.prescription_required);
-      const prices = resolvePrices(p);
+      const pid = String(p.id);
+      const full = fullById.get(pid) ?? p; // fall back to the matched row
+      const inStock = stocks.get(pid) ?? 0;
+      const rx = Boolean(full.prescription_required ?? p.prescription_required);
+      const prices = resolvePrices(full);
       return {
         product_id: p.id,
         name: p.name,
         active_substance: p.active_substance,
         form: p.form,
         dosage: p.dosage,
-        manufacturer: resolveManufacturer(p),
-        country: resolveCountry(p),
+        manufacturer: resolveManufacturer(full),
+        country: resolveCountry(full),
         price: prices.price,
         price_with_vat: prices.price_with_vat,
         price_without_vat: prices.price_without_vat,
         prescription_required: rx,
         in_stock: inStock,
         available: inStock > 0 && !rx,
-        details: catalogDetails(p),
+        details: catalogDetails(full),
       };
     }),
   });
