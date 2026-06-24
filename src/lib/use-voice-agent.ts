@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RetellWebClient } from "retell-client-js-sdk";
 
 import { createWebCall } from "./retell";
+import { ensureMicrophoneAccess, setMicrophoneGranted } from "./microphone";
 
 export type VoiceStatus = "idle" | "connecting" | "live" | "error";
 export type VoiceError = "not-configured" | "mic" | "failed" | null;
@@ -42,6 +43,15 @@ export function useVoiceAgent() {
     setError(null);
     setStatus("connecting");
     try {
+      // Microphone permission: if it was already granted (e.g. prewarmed on PWA
+      // install) we don't prompt again; otherwise request it once now.
+      const micOk = await ensureMicrophoneAccess();
+      if (!micOk) {
+        setError("mic");
+        setStatus("error");
+        return;
+      }
+
       const client = await ensureClient();
       const { accessToken } = await createWebCall();
       await client.startCall({ accessToken });
@@ -52,9 +62,11 @@ export function useVoiceAgent() {
       else if (
         message.toLowerCase().includes("permission") ||
         message.toLowerCase().includes("microphone")
-      )
+      ) {
+        // a recorded grant turned out to be revoked — clear it so we re-prompt
+        setMicrophoneGranted(false);
         setError("mic");
-      else setError("failed");
+      } else setError("failed");
       setStatus("error");
     }
   }, [ensureClient]);
