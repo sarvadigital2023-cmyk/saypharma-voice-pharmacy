@@ -9,12 +9,8 @@ export type VoiceError = "not-configured" | "mic" | "failed" | null;
 /**
  * Drives a Retell web voice call (agent "Cimo").
  *
- * start(): mints a token via the server fn, then opens the WebRTC call with the
- * Retell web SDK (loaded lazily so it never runs during SSR). The SDK requests
- * the microphone itself — we deliberately do NOT call getUserMedia here, because
- * a second capture races/conflicts with the SDK's own and makes the call fail.
- * The one-time permission prompt is instead prewarmed on PWA install (see
- * ./microphone.ts + __root.tsx), which never touches this call path.
+ * start(): mints a token via the server fn, then opens the WebRTC call with
+ * the Retell web SDK (loaded lazily so it never runs during SSR).
  * stop():  ends the call.
  */
 export function useVoiceAgent() {

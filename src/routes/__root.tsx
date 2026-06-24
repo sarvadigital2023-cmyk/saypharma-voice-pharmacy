@@ -7,12 +7,11 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { ThemeProvider } from "../theme";
 import { I18nProvider } from "../i18n";
-import { prewarmMicrophoneOnInstall } from "../lib/microphone";
 
 // Runs before first paint so the stored theme/locale are applied with no flash.
 const THEME_BOOT = `(function(){try{var t=localStorage.getItem('sp-theme');var l=localStorage.getItem('sp-locale');var r=document.documentElement;if(t==='light')r.classList.add('light');r.style.colorScheme=t==='light'?'light':'dark';if(l==='ru'||l==='uk'||l==='en')r.lang=l;}catch(e){}})();`;
@@ -137,10 +136,6 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-
-  // Prewarm the microphone permission when the PWA is installed to the home
-  // screen, so the customer is never prompted again when they press "Talk".
-  useEffect(() => prewarmMicrophoneOnInstall(), []);
 
   return (
     <QueryClientProvider client={queryClient}>
