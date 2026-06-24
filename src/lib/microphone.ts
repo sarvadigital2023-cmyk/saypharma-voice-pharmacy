@@ -72,6 +72,26 @@ export async function ensureMicrophoneAccess(): Promise<boolean> {
 }
 
 /**
+ * Acquire the microphone and RETURN the live stream WITHOUT stopping it. Used
+ * right before starting a call: it triggers the permission prompt up front, and
+ * the caller keeps the stream alive until the call's own capture is running, so
+ * there is no release-then-reacquire gap (which can make the SDK's getUserMedia
+ * fail). Returns null if access is denied/unavailable. Records the grant.
+ */
+export async function acquireMicrophoneStream(): Promise<MediaStream | null> {
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+    return null;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    setMicrophoneGranted(true);
+    return stream;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Start listening for the PWA `appinstalled` event and prewarm the microphone
  * permission the moment the app is installed. Returns an unsubscribe function.
  */
