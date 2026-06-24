@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RetellWebClient } from "retell-client-js-sdk";
 
 import { createWebCall } from "./retell";
-import { ensureMicrophoneAccess, setMicrophoneGranted } from "./microphone";
+import { requestMicrophoneAccess, setMicrophoneGranted } from "./microphone";
 
 export type VoiceStatus = "idle" | "connecting" | "live" | "error";
 export type VoiceError = "not-configured" | "mic" | "failed" | null;
@@ -43,10 +43,15 @@ export function useVoiceAgent() {
     setError(null);
     setStatus("connecting");
     try {
-      // Microphone permission: if it was already granted (e.g. prewarmed on PWA
-      // install) we don't prompt again; otherwise request it once now.
-      const micOk = await ensureMicrophoneAccess();
+      // Acquire the microphone OURSELVES before the Retell call, so the browser
+      // permission prompt (if any) happens here — never in the middle of the
+      // call. We deliberately do NOT skip on the stored flag: the OS permission
+      // can differ from the flag (e.g. an installed PWA vs the browser tab), and
+      // skipping let the Retell SDK trigger the prompt mid-call. After the first
+      // grant this getUserMedia call is silent, so it still prompts only once.
+      const micOk = await requestMicrophoneAccess();
       if (!micOk) {
+        setMicrophoneGranted(false);
         setError("mic");
         setStatus("error");
         return;
