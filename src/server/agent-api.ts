@@ -77,6 +77,9 @@ type Settings = {
   min_order_amount: number | null;
   working_hours: string | null;
   timezone: string | null;
+  pharmacy_address: string | null;
+  phone1: string | null;
+  phone2: string | null;
 };
 
 let settingsCache: { value: Settings | null; at: number } | undefined;
@@ -98,6 +101,9 @@ async function getSettings(supabase: SupabaseClient): Promise<Settings | null> {
         min_order_amount: num(s.min_order_amount),
         working_hours: str(s.working_hours),
         timezone: str(s.timezone),
+        pharmacy_address: str(s.pharmacy_address),
+        phone1: str(s.phone1),
+        phone2: str(s.phone2),
       }
     : null;
   settingsCache = { value, at: Date.now() };
@@ -262,6 +268,9 @@ async function pharmacyInfo(supabase: SupabaseClient) {
     delivery_free: fee != null && fee === 0,
     min_order_amount: s.min_order_amount,
     delivery_radius_km: s.delivery_radius_km,
+    pharmacy_address: s.pharmacy_address,
+    phone1: s.phone1,
+    phone2: s.phone2,
     location: { latitude: s.latitude, longitude: s.longitude },
     working_hours: s.working_hours,
     timezone: s.timezone,
