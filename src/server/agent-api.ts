@@ -150,8 +150,29 @@ async function searchProducts(supabase: SupabaseClient, args: Record<string, unk
   const q = raw.replace(/[,()*%]/g, " ").trim();
 
   // select everything so we never miss a price/origin column the admin added
-  let query = supabase.from("products").select("*").limit(10);
-  if (q) query = query.or(`name.ilike.%${q}%,active_substance.ilike.%${q}%`);
+  let query = supabase.from("products").select("*").limit(15);
+
+  // Build a tolerant filter: speech-to-text gives us inflected / multi-word
+  // queries ("Нурофену", "Нурофен форте 200"), so match on per-word STEMS
+  // (first letters of each word) across name + active_substance instead of an
+  // exact substring of the whole phrase.
+  const clauses = new Set<string>();
+  const tokens = q
+    .toLowerCase()
+    .split(/\s+/)
+    .map((t) => t.replace(/[.\-]/g, ""))
+    .filter((t) => t.length >= 3)
+    .slice(0, 5);
+  for (const t of tokens) {
+    // stem: drop the last 2 chars for longer words to survive declensions
+    const stem = t.length >= 6 ? t.slice(0, t.length - 2) : t;
+    for (const term of new Set([t, stem])) {
+      clauses.add(`name.ilike.%${term}%`);
+      clauses.add(`active_substance.ilike.%${term}%`);
+    }
+  }
+  if (clauses.size > 0) query = query.or([...clauses].join(","));
+  else if (q) query = query.or(`name.ilike.%${q}%,active_substance.ilike.%${q}%`);
 
   const { data, error } = await query;
   if (error) return json({ error: "db_error" }, 500);
