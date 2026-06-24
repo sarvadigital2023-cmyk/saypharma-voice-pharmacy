@@ -17,6 +17,8 @@ export function useVoiceAgent() {
   const clientRef = useRef<RetellWebClient | null>(null);
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [error, setError] = useState<VoiceError>(null);
+  // raw reason (e.g. "RETELL_CALL_FAILED:401") for on-screen diagnostics
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   const ensureClient = useCallback(async () => {
     if (clientRef.current) return clientRef.current;
@@ -40,6 +42,7 @@ export function useVoiceAgent() {
 
   const start = useCallback(async () => {
     setError(null);
+    setErrorDetail(null);
     setStatus("connecting");
     try {
       const client = await ensureClient();
@@ -48,6 +51,7 @@ export function useVoiceAgent() {
     } catch (e) {
       console.error(e);
       const message = e instanceof Error ? e.message : String(e);
+      setErrorDetail(message);
       if (message.includes("RETELL_NOT_CONFIGURED")) setError("not-configured");
       else if (
         message.toLowerCase().includes("permission") ||
@@ -82,6 +86,7 @@ export function useVoiceAgent() {
   return {
     status,
     error,
+    errorDetail,
     start,
     stop,
     isLive: status === "live",

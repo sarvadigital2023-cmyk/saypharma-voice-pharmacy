@@ -52,7 +52,7 @@ function HomePage() {
       : voice.error === "mic"
         ? t("voice.mic")
         : voice.error
-          ? t("voice.failed")
+          ? `${t("voice.failed")}${voice.errorDetail ? ` (${voice.errorDetail})` : ""}`
           : null;
   const [chatValue, setChatValue] = useState("");
   const [chatFocused, setChatFocused] = useState(false);

@@ -29,19 +29,27 @@ export const createWebCall = createServerFn({ method: "POST" }).handler(async ()
     throw new Error("RETELL_NOT_CONFIGURED");
   }
 
-  const res = await fetch("https://api.retellai.com/v2/create-web-call", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ agent_id: agentId }),
-  });
+  let res: Response;
+  try {
+    res = await fetch("https://api.retellai.com/v2/create-web-call", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ agent_id: agentId }),
+    });
+  } catch (e) {
+    console.error("Retell create-web-call network error:", e);
+    throw new Error("RETELL_CALL_FAILED:network");
+  }
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
     console.error(`Retell create-web-call failed: ${res.status} ${detail}`);
-    throw new Error("RETELL_CALL_FAILED");
+    // include the HTTP status so the cause is visible (401=bad key, 402=quota,
+    // 404=agent not found, etc.) instead of a generic failure.
+    throw new Error(`RETELL_CALL_FAILED:${res.status}`);
   }
 
   const result = (await res.json()) as { access_token: string; call_id: string };
