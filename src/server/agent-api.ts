@@ -79,36 +79,50 @@ function str(value: unknown): string | null {
 // country vs manufacturer_country). Resolve them tolerantly so the agent always
 // gets a value, and also pass through the raw catalog columns below as a backstop.
 
+// Column whose name MEANS "price" — English, Russian and Ukrainian roots and
+// transliterations (price, cena, ціна/цін, вартість/варт, стоимость/стоим...).
+const PRICE_KEY = /(price|cena|cina|tsina|tsena|цена|цін|варт|стоим|retail|sell|amount|cost)/i;
+
+// Given a price column name, is it the WITH-VAT, WITHOUT-VAT or a plain price?
+function classifyPriceKey(k: string): "with" | "without" | "plain" {
+  const s = k.toLowerCase();
+  if (/(without|no[_-]?vat|excl|net|без|bez)/.test(s)) return "without";
+  if (/(with|incl|gross|vat|tax|ндс|пдв|pdv|nds)/.test(s)) return "with";
+  return "plain";
+}
+
 function resolvePrices(p: Record<string, unknown>) {
-  const withVat =
+  let withVat =
     num(p.price_with_vat) ??
     num(p.price_vat) ??
     num(p.price_incl_vat) ??
     num(p.price_with_tax) ??
     num(p.gross_price) ??
     num(p.retail_price);
-  const withoutVat =
+  let withoutVat =
     num(p.price_without_vat) ??
     num(p.price_no_vat) ??
     num(p.price_excl_vat) ??
     num(p.net_price) ??
     num(p.base_price);
-  const base = num(p.price);
-  // the price the customer actually pays (prefer the gross/with-VAT figure)
-  let charge = withVat ?? base ?? withoutVat;
-  if (charge == null) {
-    // last resort: first money-looking numeric column under any name
-    for (const [k, v] of Object.entries(p)) {
-      if (!/(price|vat|cost|amount|sum|sell|retail)/i.test(k)) continue;
-      const n = num(v);
-      if (n != null) {
-        charge = n;
-        break;
-      }
-    }
+  let plain = num(p.price);
+
+  // Scan any price-meaning column (covers RU/UA names like "цена_с_ндс",
+  // "ціна_без_пдв", "вартість") to fill whatever the explicit list missed.
+  for (const [k, v] of Object.entries(p)) {
+    if (!PRICE_KEY.test(k)) continue;
+    const n = num(v);
+    if (n == null) continue;
+    const cls = classifyPriceKey(k);
+    if (cls === "with") withVat ??= n;
+    else if (cls === "without") withoutVat ??= n;
+    else plain ??= n;
   }
+
+  // the price the customer actually pays (prefer the gross/with-VAT figure)
+  const charge = withVat ?? plain ?? withoutVat;
   return {
-    price: base ?? charge,
+    price: plain ?? charge,
     // always give the agent a "to pay" figure so it never reports "no price"
     price_with_vat: withVat ?? charge,
     price_without_vat: withoutVat,
@@ -137,7 +151,11 @@ function catalogDetails(p: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(p)) {
     if (v == null || v === "") continue;
-    if (/(price|vat|tax|country|origin|manufact|producer|brand|made_in)/i.test(k)) out[k] = v;
+    if (
+      PRICE_KEY.test(k) ||
+      /(vat|tax|ндс|пдв|country|origin|manufact|producer|brand|made_in|краін|стран|вироб|производ)/i.test(k)
+    )
+      out[k] = v;
   }
   return out;
 }
@@ -150,29 +168,8 @@ async function searchProducts(supabase: SupabaseClient, args: Record<string, unk
   const q = raw.replace(/[,()*%]/g, " ").trim();
 
   // select everything so we never miss a price/origin column the admin added
-  let query = supabase.from("products").select("*").limit(15);
-
-  // Build a tolerant filter: speech-to-text gives us inflected / multi-word
-  // queries ("Нурофену", "Нурофен форте 200"), so match on per-word STEMS
-  // (first letters of each word) across name + active_substance instead of an
-  // exact substring of the whole phrase.
-  const clauses = new Set<string>();
-  const tokens = q
-    .toLowerCase()
-    .split(/\s+/)
-    .map((t) => t.replace(/[.\-]/g, ""))
-    .filter((t) => t.length >= 3)
-    .slice(0, 5);
-  for (const t of tokens) {
-    // stem: drop the last 2 chars for longer words to survive declensions
-    const stem = t.length >= 6 ? t.slice(0, t.length - 2) : t;
-    for (const term of new Set([t, stem])) {
-      clauses.add(`name.ilike.%${term}%`);
-      clauses.add(`active_substance.ilike.%${term}%`);
-    }
-  }
-  if (clauses.size > 0) query = query.or([...clauses].join(","));
-  else if (q) query = query.or(`name.ilike.%${q}%,active_substance.ilike.%${q}%`);
+  let query = supabase.from("products").select("*").limit(10);
+  if (q) query = query.or(`name.ilike.%${q}%,active_substance.ilike.%${q}%`);
 
   const { data, error } = await query;
   if (error) return json({ error: "db_error" }, 500);
