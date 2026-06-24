@@ -4,22 +4,16 @@
 // it talks to Supabase with the SERVICE ROLE key — that key never reaches the
 // browser.
 //
+// PRINCIPLE: no business parameters are hardcoded. Currency, location, delivery
+// radius, delivery fee, minimum order, working hours and timezone are ALL read
+// live from the pharmacy_settings table. Change them in the admin and the agent
+// picks them up automatically (settings are cached for 60s only).
+//
 // Required server env (set in Vercel → Environment Variables):
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
 //   AGENT_TOOL_SECRET    (optional) — shared secret Retell sends as the
 //                         "x-agent-secret" header or "?k=" query param.
-//   PHARMACY_TIMEZONE    (optional) — IANA tz for "open now" (default Europe/Sofia,
-//                         matching the pharmacy location stored in settings).
-//
-// Real DB shape this file relies on (verified against project saypharma-db):
-//   products(id, name, active_substance, form, country, age_category,
-//            prescription_required, dosage, side_effects, description, price)
-//   stock_movements(product_id, type['in'|'out'], quantity)
-//   pharmacy_settings(currency, latitude, longitude, delivery_radius_km,
-//                     delivery_fee, min_order_amount, working_hours)
-//   orders(phone, full_name, address, payment_method, comment, items jsonb,
-//          total_amount, status)
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -70,33 +64,19 @@ function str(value: unknown): string | null {
   return value == null || value === "" ? null : String(value);
 }
 
-// ---------------------------------------------------------------- currency
-
-const CURRENCIES: Record<string, { name: string; symbol: string }> = {
-  EUR: { name: "евро", symbol: "€" },
-  USD: { name: "доллар США", symbol: "$" },
-  UAH: { name: "гривна", symbol: "₴" },
-  GBP: { name: "фунт стерлингов", symbol: "£" },
-  BGN: { name: "болгарский лев", symbol: "лв" },
-  PLN: { name: "злотый", symbol: "zł" },
-};
-
-function currencyInfo(code: string | null) {
-  const c = (code ?? "EUR").trim().toUpperCase();
-  const meta = CURRENCIES[c] ?? { name: c, symbol: c };
-  return { currency: c, currency_name: meta.name, currency_symbol: meta.symbol };
-}
-
 // ---------------------------------------------------------------- settings
 
+// Everything here mirrors pharmacy_settings 1:1. New columns added in the admin
+// (e.g. "timezone") are picked up automatically because we select "*".
 type Settings = {
-  currency: string;
+  currency: string | null;
   latitude: number | null;
   longitude: number | null;
   delivery_radius_km: number | null;
   delivery_fee: number | null;
   min_order_amount: number | null;
   working_hours: string | null;
+  timezone: string | null;
 };
 
 let settingsCache: { value: Settings | null; at: number } | undefined;
@@ -104,21 +84,20 @@ const SETTINGS_TTL_MS = 60_000;
 
 async function getSettings(supabase: SupabaseClient): Promise<Settings | null> {
   if (settingsCache && Date.now() - settingsCache.at < SETTINGS_TTL_MS) return settingsCache.value;
-  const { data } = await supabase
-    .from("pharmacy_settings")
-    .select("currency,latitude,longitude,delivery_radius_km,delivery_fee,min_order_amount,working_hours")
-    .limit(1)
-    .maybeSingle();
+  // SELECT * so the read never breaks when a new column is added and so new
+  // settings columns are picked up without any code change.
+  const { data } = await supabase.from("pharmacy_settings").select("*").limit(1).maybeSingle();
   const s = asObject(data);
   const value: Settings | null = data
     ? {
-        currency: str(s.currency) ?? "EUR",
+        currency: str(s.currency),
         latitude: num(s.latitude),
         longitude: num(s.longitude),
         delivery_radius_km: num(s.delivery_radius_km),
         delivery_fee: num(s.delivery_fee),
         min_order_amount: num(s.min_order_amount),
         working_hours: str(s.working_hours),
+        timezone: str(s.timezone),
       }
     : null;
   settingsCache = { value, at: Date.now() };
@@ -127,9 +106,7 @@ async function getSettings(supabase: SupabaseClient): Promise<Settings | null> {
 
 // ---------------------------------------------------------------- working hours
 
-const PHARMACY_TZ = process.env.PHARMACY_TIMEZONE || "Europe/Sofia";
-
-/** Minutes since midnight, in the pharmacy timezone, right now. */
+/** Minutes since midnight in the given IANA timezone, right now. */
 function nowMinutesInTz(tz: string): number | null {
   try {
     const parts = new Intl.DateTimeFormat("en-GB", {
@@ -143,20 +120,24 @@ function nowMinutesInTz(tz: string): number | null {
     const h = Number(m[1]) % 24;
     return h * 60 + Number(m[2]);
   } catch {
-    return null;
+    return null; // unknown/invalid timezone string
   }
 }
 
-/** working_hours is text like "09:00-21:00" (optionally overnight). */
-function isOpenNow(workingHours: string | null): boolean | null {
-  if (!workingHours) return null;
+/**
+ * Is the pharmacy open now? Needs both working_hours (text like "09:00-21:00")
+ * and a timezone, both taken from pharmacy_settings. Returns null when either is
+ * missing or unparseable — we never guess a timezone.
+ */
+function isOpenNow(workingHours: string | null, timezone: string | null): boolean | null {
+  if (!workingHours || !timezone) return null;
   const m = workingHours.match(/(\d{1,2}):(\d{2})\s*[-–—to ]+\s*(\d{1,2}):(\d{2})/);
   if (!m) return null;
   const open = Number(m[1]) * 60 + Number(m[2]);
   const close = Number(m[3]) * 60 + Number(m[4]);
-  const now = nowMinutesInTz(PHARMACY_TZ);
+  const now = nowMinutesInTz(timezone);
   if (now == null) return null;
-  if (close === open) return true; // treat as 24h
+  if (close === open) return true; // treat equal open/close as 24h
   return close > open ? now >= open && now < close : now >= open || now < close;
 }
 
@@ -173,7 +154,8 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/** Geocode a free-form address via OpenStreetMap Nominatim (no API key). */
+/** Geocode a free-form address via OpenStreetMap Nominatim (no API key). This is
+ * infrastructure (address → coordinates), not a business parameter. */
 async function geocode(address: string): Promise<{ lat: number; lon: number } | null> {
   try {
     const u = new URL("https://nominatim.openstreetmap.org/search");
@@ -222,8 +204,6 @@ async function searchProducts(supabase: SupabaseClient, args: Record<string, unk
   // strip characters that have meaning inside a PostgREST or() filter
   const q = raw.replace(/[,()*%]/g, " ").trim();
 
-  // Single, explicit-column matching query (proven-stable shape) — includes the
-  // real price/country columns, so no second lookup is needed.
   let query = supabase
     .from("products")
     .select("id,name,active_substance,form,dosage,country,age_category,prescription_required,price")
@@ -238,10 +218,9 @@ async function searchProducts(supabase: SupabaseClient, args: Record<string, unk
 
   // stock + settings(currency) in parallel — no extra latency on the search path
   const [stocks, settings] = await Promise.all([stockFor(supabase, ids), getSettings(supabase)]);
-  const cur = currencyInfo(settings?.currency ?? null);
 
   return json({
-    ...cur,
+    currency: settings?.currency ?? null,
     products: products.map((p) => {
       const inStock = stocks.get(String(p.id)) ?? 0;
       const rx = Boolean(p.prescription_required);
@@ -274,48 +253,46 @@ async function checkAvailability(supabase: SupabaseClient, args: Record<string, 
 }
 
 async function pharmacyInfo(supabase: SupabaseClient) {
-  const settings = await getSettings(supabase);
-  if (!settings) return json({ error: "settings_not_found" }, 500);
-  const cur = currencyInfo(settings.currency);
-  const fee = settings.delivery_fee;
+  const s = await getSettings(supabase);
+  if (!s) return json({ error: "settings_not_found" }, 500);
+  const fee = s.delivery_fee;
   return json({
-    ...cur,
+    currency: s.currency,
     delivery_fee: fee,
     delivery_free: fee != null && fee === 0,
-    min_order_amount: settings.min_order_amount,
-    delivery_radius_km: settings.delivery_radius_km,
-    location: { latitude: settings.latitude, longitude: settings.longitude },
-    working_hours: settings.working_hours,
-    open_now: isOpenNow(settings.working_hours),
-    timezone: PHARMACY_TZ,
+    min_order_amount: s.min_order_amount,
+    delivery_radius_km: s.delivery_radius_km,
+    location: { latitude: s.latitude, longitude: s.longitude },
+    working_hours: s.working_hours,
+    timezone: s.timezone,
+    open_now: isOpenNow(s.working_hours, s.timezone),
   });
 }
 
 async function checkDelivery(supabase: SupabaseClient, args: Record<string, unknown>) {
-  const settings = await getSettings(supabase);
-  if (!settings) return json({ error: "settings_not_found" }, 500);
-  const cur = currencyInfo(settings.currency);
-  const fee = settings.delivery_fee;
-  const radius = settings.delivery_radius_km;
+  const s = await getSettings(supabase);
+  if (!s) return json({ error: "settings_not_found" }, 500);
+  const fee = s.delivery_fee;
+  const radius = s.delivery_radius_km;
 
   const base = {
-    ...cur,
+    currency: s.currency,
     radius_km: radius,
     delivery_fee: fee,
     delivery_free: fee != null && fee === 0,
-    open_now: isOpenNow(settings.working_hours),
-    working_hours: settings.working_hours,
+    working_hours: s.working_hours,
+    open_now: isOpenNow(s.working_hours, s.timezone),
   };
 
-  // Resolve the customer location: explicit coords > free-form address > given distance.
+  // Resolve the customer location: explicit coords > free-form address > distance.
   let lat = num(args.latitude ?? args.lat);
   let lon = num(args.longitude ?? args.lon ?? args.lng);
 
-  if ((lat == null || lon == null)) {
-    const addressParts = [args.address, args.street, args.city, args.postcode, args.region, args.country]
+  if (lat == null || lon == null) {
+    const parts = [args.address, args.street, args.city, args.postcode, args.region, args.country]
       .map((v) => str(v))
       .filter(Boolean);
-    const addressText = (str(args.address) ?? addressParts.join(", ")).trim();
+    const addressText = (str(args.address) ?? parts.join(", ")).trim();
     if (addressText) {
       const geo = await geocode(addressText);
       if (geo) {
@@ -330,9 +307,9 @@ async function checkDelivery(supabase: SupabaseClient, args: Record<string, unkn
   let distanceKm = num(args.distance_km);
   if (distanceKm == null) {
     if (lat == null || lon == null) return json({ ...base, ok: false, reason: "location_required" });
-    if (settings.latitude == null || settings.longitude == null)
+    if (s.latitude == null || s.longitude == null)
       return json({ ...base, ok: false, reason: "pharmacy_location_unset" });
-    distanceKm = haversineKm(settings.latitude, settings.longitude, lat, lon);
+    distanceKm = haversineKm(s.latitude, s.longitude, lat, lon);
   }
 
   const distance = Math.round(distanceKm * 10) / 10;
@@ -351,16 +328,16 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
   const comment = (args.comment ?? null) as string | null;
 
   const settings = await getSettings(supabase);
-  const cur = currencyInfo(settings?.currency ?? null);
+  const currency = settings?.currency ?? null;
 
   const rawItems = Array.isArray(args.items) ? (args.items as OrderItemIn[]) : [];
-  if (!phone) return json({ ok: false, reason: "phone_required", ...cur });
-  if (rawItems.length === 0) return json({ ok: false, reason: "no_items", ...cur });
+  if (!phone) return json({ ok: false, reason: "phone_required", currency });
+  if (rawItems.length === 0) return json({ ok: false, reason: "no_items", currency });
 
   const items = rawItems
     .map((it) => ({ product_id: String(it.product_id ?? ""), quantity: Math.floor(Number(it.quantity ?? 0)) }))
     .filter((it) => it.product_id && it.quantity > 0);
-  if (items.length === 0) return json({ ok: false, reason: "no_valid_items", ...cur });
+  if (items.length === 0) return json({ ok: false, reason: "no_valid_items", currency });
 
   const ids = [...new Set(items.map((it) => it.product_id))];
   const { data: prodRows, error: prodErr } = await supabase
@@ -376,20 +353,20 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
   const lines: Array<{ product_id: string; name: string; quantity: number; price: number }> = [];
   for (const it of items) {
     const p = byId.get(it.product_id);
-    if (!p) return json({ ok: false, reason: "product_not_found", product_id: it.product_id, ...cur });
+    if (!p) return json({ ok: false, reason: "product_not_found", product_id: it.product_id, currency });
     if (Boolean(p.prescription_required))
-      return json({ ok: false, reason: "prescription_required", product: p.name, ...cur });
+      return json({ ok: false, reason: "prescription_required", product: p.name, currency });
     const price = num(p.price);
-    if (price == null) return json({ ok: false, reason: "no_price", product: p.name, ...cur });
+    if (price == null) return json({ ok: false, reason: "no_price", product: p.name, currency });
     const inStock = stocks.get(it.product_id) ?? 0;
     if (inStock < it.quantity)
-      return json({ ok: false, reason: "insufficient_stock", product: p.name, in_stock: inStock, requested: it.quantity, ...cur });
+      return json({ ok: false, reason: "insufficient_stock", product: p.name, in_stock: inStock, requested: it.quantity, currency });
     lines.push({ product_id: it.product_id, name: String(p.name), quantity: it.quantity, price });
   }
 
   const total = Math.round(lines.reduce((sum, l) => sum + l.price * l.quantity, 0) * 100) / 100;
 
-  // minimum-order check
+  // minimum-order check (from settings)
   const minOrder = settings?.min_order_amount ?? null;
   if (minOrder != null && minOrder > 0 && total < minOrder) {
     return json({
@@ -398,7 +375,7 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
       min_order_amount: minOrder,
       total,
       shortfall: Math.round((minOrder - total) * 100) / 100,
-      ...cur,
+      currency,
     });
   }
 
@@ -443,7 +420,7 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
     total_amount: order.total_amount,
     status: order.status,
     items: lines,
-    ...cur,
+    currency,
   });
 }
 
