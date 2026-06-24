@@ -7,8 +7,19 @@
 // Required server env (set in Vercel → Environment Variables):
 //   SUPABASE_URL
 //   SUPABASE_SERVICE_ROLE_KEY
-//   AGENT_TOOL_SECRET   (optional but recommended) — shared secret that Retell
-//                        sends as the "x-agent-secret" header on every tool call.
+//   AGENT_TOOL_SECRET    (optional) — shared secret Retell sends as the
+//                         "x-agent-secret" header or "?k=" query param.
+//   PHARMACY_TIMEZONE    (optional) — IANA tz for "open now" (default Europe/Sofia,
+//                         matching the pharmacy location stored in settings).
+//
+// Real DB shape this file relies on (verified against project saypharma-db):
+//   products(id, name, active_substance, form, country, age_category,
+//            prescription_required, dosage, side_effects, description, price)
+//   stock_movements(product_id, type['in'|'out'], quantity)
+//   pharmacy_settings(currency, latitude, longitude, delivery_radius_km,
+//                     delivery_fee, min_order_amount, working_hours)
+//   orders(phone, full_name, address, payment_method, comment, items jsonb,
+//          total_amount, status)
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -30,9 +41,165 @@ function getClient(): SupabaseClient | null {
   return cachedClient;
 }
 
+function asObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+}
+
+function num(value: unknown): number | null {
+  if (value == null) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "boolean") return null;
+  // Parse locale strings like "5,00", "6.00", "1 234,56".
+  let s = String(value).trim();
+  if (!s) return null;
+  s = s.replace(/[^\d.,-]/g, "");
+  if (!s) return null;
+  const hasComma = s.includes(",");
+  const hasDot = s.includes(".");
+  if (hasComma && hasDot) {
+    if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
+    else s = s.replace(/,/g, "");
+  } else if (hasComma) {
+    s = s.replace(",", ".");
+  }
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function str(value: unknown): string | null {
+  return value == null || value === "" ? null : String(value);
+}
+
+// ---------------------------------------------------------------- currency
+
+const CURRENCIES: Record<string, { name: string; symbol: string }> = {
+  EUR: { name: "евро", symbol: "€" },
+  USD: { name: "доллар США", symbol: "$" },
+  UAH: { name: "гривна", symbol: "₴" },
+  GBP: { name: "фунт стерлингов", symbol: "£" },
+  BGN: { name: "болгарский лев", symbol: "лв" },
+  PLN: { name: "злотый", symbol: "zł" },
+};
+
+function currencyInfo(code: string | null) {
+  const c = (code ?? "EUR").trim().toUpperCase();
+  const meta = CURRENCIES[c] ?? { name: c, symbol: c };
+  return { currency: c, currency_name: meta.name, currency_symbol: meta.symbol };
+}
+
+// ---------------------------------------------------------------- settings
+
+type Settings = {
+  currency: string;
+  latitude: number | null;
+  longitude: number | null;
+  delivery_radius_km: number | null;
+  delivery_fee: number | null;
+  min_order_amount: number | null;
+  working_hours: string | null;
+};
+
+let settingsCache: { value: Settings | null; at: number } | undefined;
+const SETTINGS_TTL_MS = 60_000;
+
+async function getSettings(supabase: SupabaseClient): Promise<Settings | null> {
+  if (settingsCache && Date.now() - settingsCache.at < SETTINGS_TTL_MS) return settingsCache.value;
+  const { data } = await supabase
+    .from("pharmacy_settings")
+    .select("currency,latitude,longitude,delivery_radius_km,delivery_fee,min_order_amount,working_hours")
+    .limit(1)
+    .maybeSingle();
+  const s = asObject(data);
+  const value: Settings | null = data
+    ? {
+        currency: str(s.currency) ?? "EUR",
+        latitude: num(s.latitude),
+        longitude: num(s.longitude),
+        delivery_radius_km: num(s.delivery_radius_km),
+        delivery_fee: num(s.delivery_fee),
+        min_order_amount: num(s.min_order_amount),
+        working_hours: str(s.working_hours),
+      }
+    : null;
+  settingsCache = { value, at: Date.now() };
+  return value;
+}
+
+// ---------------------------------------------------------------- working hours
+
+const PHARMACY_TZ = process.env.PHARMACY_TIMEZONE || "Europe/Sofia";
+
+/** Minutes since midnight, in the pharmacy timezone, right now. */
+function nowMinutesInTz(tz: string): number | null {
+  try {
+    const parts = new Intl.DateTimeFormat("en-GB", {
+      timeZone: tz,
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(new Date());
+    const m = parts.match(/(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    const h = Number(m[1]) % 24;
+    return h * 60 + Number(m[2]);
+  } catch {
+    return null;
+  }
+}
+
+/** working_hours is text like "09:00-21:00" (optionally overnight). */
+function isOpenNow(workingHours: string | null): boolean | null {
+  if (!workingHours) return null;
+  const m = workingHours.match(/(\d{1,2}):(\d{2})\s*[-–—to ]+\s*(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  const open = Number(m[1]) * 60 + Number(m[2]);
+  const close = Number(m[3]) * 60 + Number(m[4]);
+  const now = nowMinutesInTz(PHARMACY_TZ);
+  if (now == null) return null;
+  if (close === open) return true; // treat as 24h
+  return close > open ? now >= open && now < close : now >= open || now < close;
+}
+
+// ---------------------------------------------------------------- geo
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Geocode a free-form address via OpenStreetMap Nominatim (no API key). */
+async function geocode(address: string): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const u = new URL("https://nominatim.openstreetmap.org/search");
+    u.searchParams.set("format", "json");
+    u.searchParams.set("limit", "1");
+    u.searchParams.set("q", address);
+    const res = await fetch(u, {
+      headers: { "User-Agent": "SayPharma-Voice/1.0 (pharmacy delivery zone check)" },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (!res.ok) return null;
+    const arr = (await res.json()) as Array<{ lat?: string; lon?: string }>;
+    const hit = arr?.[0];
+    const lat = num(hit?.lat);
+    const lon = num(hit?.lon);
+    return lat != null && lon != null ? { lat, lon } : null;
+  } catch {
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------- stock
+
 type Movement = { product_id: string; type: string; quantity: number | null };
 
-/** Stock = sum(quantity where type='in') − sum(quantity where type in ('out','write_off')). */
+/** Stock = sum(quantity where type='in') − sum(quantity where type='out'). */
 async function stockFor(supabase: SupabaseClient, productIds: string[]): Promise<Map<string, number>> {
   const map = new Map<string, number>(productIds.map((id) => [id, 0]));
   if (productIds.length === 0) return map;
@@ -48,122 +215,6 @@ async function stockFor(supabase: SupabaseClient, productIds: string[]): Promise
   return map;
 }
 
-function asObject(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-}
-
-function num(value: unknown): number | null {
-  if (value == null) return null;
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value === "boolean") return null;
-  // Parse human/locale strings like "5,00", "6.00 грн", "1 234,56", "₴5".
-  let s = String(value).trim();
-  if (!s) return null;
-  s = s.replace(/[^\d.,-]/g, ""); // drop currency symbols, spaces, letters
-  if (!s) return null;
-  const hasComma = s.includes(",");
-  const hasDot = s.includes(".");
-  if (hasComma && hasDot) {
-    // whichever separator is last is the decimal one; the other is grouping
-    if (s.lastIndexOf(",") > s.lastIndexOf(".")) s = s.replace(/\./g, "").replace(",", ".");
-    else s = s.replace(/,/g, "");
-  } else if (hasComma) {
-    s = s.replace(",", "."); // comma decimal: "5,00" -> "5.00"
-  }
-  const n = Number(s);
-  return Number.isFinite(n) ? n : null;
-}
-
-function str(value: unknown): string | null {
-  return value == null || value === "" ? null : String(value);
-}
-
-// The catalog may store prices/origin under different column names depending on
-// how the admin set the table up (e.g. price vs price_with_vat vs gross_price,
-// country vs manufacturer_country). Resolve them tolerantly so the agent always
-// gets a value, and also pass through the raw catalog columns below as a backstop.
-
-// Column whose name MEANS "price" — English, Russian and Ukrainian roots and
-// transliterations (price, cena, ціна/цін, вартість/варт, стоимость/стоим...).
-const PRICE_KEY = /(price|cena|cina|tsina|tsena|цена|цін|варт|стоим|retail|sell|amount|cost)/i;
-
-// Given a price column name, is it the WITH-VAT, WITHOUT-VAT or a plain price?
-function classifyPriceKey(k: string): "with" | "without" | "plain" {
-  const s = k.toLowerCase();
-  if (/(without|no[_-]?vat|excl|net|без|bez)/.test(s)) return "without";
-  if (/(with|incl|gross|vat|tax|ндс|пдв|pdv|nds)/.test(s)) return "with";
-  return "plain";
-}
-
-function resolvePrices(p: Record<string, unknown>) {
-  let withVat =
-    num(p.price_with_vat) ??
-    num(p.price_vat) ??
-    num(p.price_incl_vat) ??
-    num(p.price_with_tax) ??
-    num(p.gross_price) ??
-    num(p.retail_price);
-  let withoutVat =
-    num(p.price_without_vat) ??
-    num(p.price_no_vat) ??
-    num(p.price_excl_vat) ??
-    num(p.net_price) ??
-    num(p.base_price);
-  let plain = num(p.price);
-
-  // Scan any price-meaning column (covers RU/UA names like "цена_с_ндс",
-  // "ціна_без_пдв", "вартість") to fill whatever the explicit list missed.
-  for (const [k, v] of Object.entries(p)) {
-    if (!PRICE_KEY.test(k)) continue;
-    const n = num(v);
-    if (n == null) continue;
-    const cls = classifyPriceKey(k);
-    if (cls === "with") withVat ??= n;
-    else if (cls === "without") withoutVat ??= n;
-    else plain ??= n;
-  }
-
-  // the price the customer actually pays (prefer the gross/with-VAT figure)
-  const charge = withVat ?? plain ?? withoutVat;
-  return {
-    price: plain ?? charge,
-    // always give the agent a "to pay" figure so it never reports "no price"
-    price_with_vat: withVat ?? charge,
-    price_without_vat: withoutVat,
-    charge,
-  };
-}
-
-function resolveCountry(p: Record<string, unknown>): string | null {
-  return str(
-    p.manufacturer_country ??
-      p.country_of_origin ??
-      p.country ??
-      p.origin_country ??
-      p.made_in ??
-      p.origin,
-  );
-}
-
-function resolveManufacturer(p: Record<string, unknown>): string | null {
-  return str(p.manufacturer ?? p.producer ?? p.brand ?? p.vendor ?? p.maker);
-}
-
-/** Backstop: surface every catalog column that looks price/origin related, under
- * its real name, so the agent can read it even if the resolvers above miss it. */
-function catalogDetails(p: Record<string, unknown>): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(p)) {
-    if (v == null || v === "") continue;
-    if (
-      PRICE_KEY.test(k) ||
-      /(vat|tax|ндс|пдв|country|origin|manufact|producer|brand|made_in|краін|стран|вироб|производ)/i.test(k)
-    )
-      out[k] = v;
-  }
-  return out;
-}
-
 // ---------------------------------------------------------------- tools
 
 async function searchProducts(supabase: SupabaseClient, args: Record<string, unknown>) {
@@ -171,12 +222,11 @@ async function searchProducts(supabase: SupabaseClient, args: Record<string, unk
   // strip characters that have meaning inside a PostgREST or() filter
   const q = raw.replace(/[,()*%]/g, " ").trim();
 
-  // MATCHING QUERY — kept identical to the original, proven-stable version:
-  // explicit columns (no SELECT *), whole-phrase ilike, limit 10. This is the
-  // only query that decides whether a product is found.
+  // Single, explicit-column matching query (proven-stable shape) — includes the
+  // real price/country columns, so no second lookup is needed.
   let query = supabase
     .from("products")
-    .select("id,name,active_substance,form,dosage,price,prescription_required,description")
+    .select("id,name,active_substance,form,dosage,country,age_category,prescription_required,price")
     .limit(10);
   if (q) query = query.or(`name.ilike.%${q}%,active_substance.ilike.%${q}%`);
 
@@ -186,43 +236,28 @@ async function searchProducts(supabase: SupabaseClient, args: Record<string, unk
   const products = (data ?? []) as Array<Record<string, unknown>>;
   const ids = products.map((p) => String(p.id));
 
-  // Fetch stock and the full rows (price-with-VAT / country / extra columns) in
-  // PARALLEL, keyed by the already-matched ids — so enrichment adds no latency
-  // over the original search and can never stop a product from being found.
-  const [stocks, fullById] = await Promise.all([
-    stockFor(supabase, ids),
-    (async () => {
-      const map = new Map<string, Record<string, unknown>>();
-      if (ids.length) {
-        const { data: full } = await supabase.from("products").select("*").in("id", ids);
-        for (const row of (full ?? []) as Array<Record<string, unknown>>) map.set(String(row.id), row);
-      }
-      return map;
-    })(),
-  ]);
+  // stock + settings(currency) in parallel — no extra latency on the search path
+  const [stocks, settings] = await Promise.all([stockFor(supabase, ids), getSettings(supabase)]);
+  const cur = currencyInfo(settings?.currency ?? null);
 
   return json({
+    ...cur,
     products: products.map((p) => {
-      const pid = String(p.id);
-      const full = fullById.get(pid) ?? p; // fall back to the matched row
-      const inStock = stocks.get(pid) ?? 0;
-      const rx = Boolean(full.prescription_required ?? p.prescription_required);
-      const prices = resolvePrices(full);
+      const inStock = stocks.get(String(p.id)) ?? 0;
+      const rx = Boolean(p.prescription_required);
+      const price = num(p.price);
       return {
         product_id: p.id,
         name: p.name,
         active_substance: p.active_substance,
         form: p.form,
         dosage: p.dosage,
-        manufacturer: resolveManufacturer(full),
-        country: resolveCountry(full),
-        price: prices.price,
-        price_with_vat: prices.price_with_vat,
-        price_without_vat: prices.price_without_vat,
+        country: str(p.country),
+        age_category: str(p.age_category),
+        price,
         prescription_required: rx,
         in_stock: inStock,
-        available: inStock > 0 && !rx,
-        details: catalogDetails(full),
+        available: inStock > 0 && !rx && price != null,
       };
     }),
   });
@@ -239,15 +274,70 @@ async function checkAvailability(supabase: SupabaseClient, args: Record<string, 
 }
 
 async function pharmacyInfo(supabase: SupabaseClient) {
-  const { data } = await supabase.from("pharmacy_settings").select("*").limit(1).maybeSingle();
-  const s = asObject(data);
+  const settings = await getSettings(supabase);
+  if (!settings) return json({ error: "settings_not_found" }, 500);
+  const cur = currencyInfo(settings.currency);
+  const fee = settings.delivery_fee;
   return json({
-    delivery_fee: s.delivery_fee ?? null,
-    min_order_amount: s.min_order_amount ?? null,
-    working_hours: s.working_hours ?? null,
-    delivery_radius_km: s.delivery_radius_km ?? null,
-    location: { latitude: s.latitude ?? null, longitude: s.longitude ?? null },
+    ...cur,
+    delivery_fee: fee,
+    delivery_free: fee != null && fee === 0,
+    min_order_amount: settings.min_order_amount,
+    delivery_radius_km: settings.delivery_radius_km,
+    location: { latitude: settings.latitude, longitude: settings.longitude },
+    working_hours: settings.working_hours,
+    open_now: isOpenNow(settings.working_hours),
+    timezone: PHARMACY_TZ,
   });
+}
+
+async function checkDelivery(supabase: SupabaseClient, args: Record<string, unknown>) {
+  const settings = await getSettings(supabase);
+  if (!settings) return json({ error: "settings_not_found" }, 500);
+  const cur = currencyInfo(settings.currency);
+  const fee = settings.delivery_fee;
+  const radius = settings.delivery_radius_km;
+
+  const base = {
+    ...cur,
+    radius_km: radius,
+    delivery_fee: fee,
+    delivery_free: fee != null && fee === 0,
+    open_now: isOpenNow(settings.working_hours),
+    working_hours: settings.working_hours,
+  };
+
+  // Resolve the customer location: explicit coords > free-form address > given distance.
+  let lat = num(args.latitude ?? args.lat);
+  let lon = num(args.longitude ?? args.lon ?? args.lng);
+
+  if ((lat == null || lon == null)) {
+    const addressParts = [args.address, args.street, args.city, args.postcode, args.region, args.country]
+      .map((v) => str(v))
+      .filter(Boolean);
+    const addressText = (str(args.address) ?? addressParts.join(", ")).trim();
+    if (addressText) {
+      const geo = await geocode(addressText);
+      if (geo) {
+        lat = geo.lat;
+        lon = geo.lon;
+      } else {
+        return json({ ...base, ok: false, reason: "could_not_locate", address: addressText });
+      }
+    }
+  }
+
+  let distanceKm = num(args.distance_km);
+  if (distanceKm == null) {
+    if (lat == null || lon == null) return json({ ...base, ok: false, reason: "location_required" });
+    if (settings.latitude == null || settings.longitude == null)
+      return json({ ...base, ok: false, reason: "pharmacy_location_unset" });
+    distanceKm = haversineKm(settings.latitude, settings.longitude, lat, lon);
+  }
+
+  const distance = Math.round(distanceKm * 10) / 10;
+  const inZone = radius != null ? distance <= radius : null;
+  return json({ ...base, ok: true, in_zone: inZone, distance_km: distance });
 }
 
 type OrderItemIn = { product_id?: unknown; quantity?: unknown };
@@ -260,19 +350,22 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
   const paymentMethod = (args.payment_method ?? customer.payment_method ?? null) as string | null;
   const comment = (args.comment ?? null) as string | null;
 
+  const settings = await getSettings(supabase);
+  const cur = currencyInfo(settings?.currency ?? null);
+
   const rawItems = Array.isArray(args.items) ? (args.items as OrderItemIn[]) : [];
-  if (!phone) return json({ ok: false, reason: "phone_required" });
-  if (rawItems.length === 0) return json({ ok: false, reason: "no_items" });
+  if (!phone) return json({ ok: false, reason: "phone_required", ...cur });
+  if (rawItems.length === 0) return json({ ok: false, reason: "no_items", ...cur });
 
   const items = rawItems
     .map((it) => ({ product_id: String(it.product_id ?? ""), quantity: Math.floor(Number(it.quantity ?? 0)) }))
     .filter((it) => it.product_id && it.quantity > 0);
-  if (items.length === 0) return json({ ok: false, reason: "no_valid_items" });
+  if (items.length === 0) return json({ ok: false, reason: "no_valid_items", ...cur });
 
   const ids = [...new Set(items.map((it) => it.product_id))];
   const { data: prodRows, error: prodErr } = await supabase
     .from("products")
-    .select("*")
+    .select("id,name,price,prescription_required")
     .in("id", ids);
   if (prodErr) return json({ error: "db_error" }, 500);
 
@@ -283,24 +376,30 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
   const lines: Array<{ product_id: string; name: string; quantity: number; price: number }> = [];
   for (const it of items) {
     const p = byId.get(it.product_id);
-    if (!p) return json({ ok: false, reason: "product_not_found", product_id: it.product_id });
+    if (!p) return json({ ok: false, reason: "product_not_found", product_id: it.product_id, ...cur });
     if (Boolean(p.prescription_required))
-      return json({ ok: false, reason: "prescription_required", product: p.name });
-    const charge = resolvePrices(p).charge;
-    if (charge == null) return json({ ok: false, reason: "no_price", product: p.name });
+      return json({ ok: false, reason: "prescription_required", product: p.name, ...cur });
+    const price = num(p.price);
+    if (price == null) return json({ ok: false, reason: "no_price", product: p.name, ...cur });
     const inStock = stocks.get(it.product_id) ?? 0;
     if (inStock < it.quantity)
-      return json({ ok: false, reason: "insufficient_stock", product: p.name, in_stock: inStock, requested: it.quantity });
-    lines.push({ product_id: it.product_id, name: String(p.name), quantity: it.quantity, price: charge });
+      return json({ ok: false, reason: "insufficient_stock", product: p.name, in_stock: inStock, requested: it.quantity, ...cur });
+    lines.push({ product_id: it.product_id, name: String(p.name), quantity: it.quantity, price });
   }
 
-  const total = lines.reduce((sum, l) => sum + l.price * l.quantity, 0);
+  const total = Math.round(lines.reduce((sum, l) => sum + l.price * l.quantity, 0) * 100) / 100;
 
-  // optional minimum-order check
-  const { data: settings } = await supabase.from("pharmacy_settings").select("min_order_amount").limit(1).maybeSingle();
-  const minOrder = settings?.min_order_amount;
-  if (minOrder != null && total < Number(minOrder)) {
-    return json({ ok: false, reason: "min_order_not_met", min_order_amount: Number(minOrder), total });
+  // minimum-order check
+  const minOrder = settings?.min_order_amount ?? null;
+  if (minOrder != null && minOrder > 0 && total < minOrder) {
+    return json({
+      ok: false,
+      reason: "min_order_not_met",
+      min_order_amount: minOrder,
+      total,
+      shortfall: Math.round((minOrder - total) * 100) / 100,
+      ...cur,
+    });
   }
 
   // create the order
@@ -331,19 +430,28 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
   );
   if (moveErr) {
     // best effort: flag the order so stock stays consistent for staff review
-    await supabase.from("orders").update({ status: "cancelled", comment: `${comment ?? ""} [stock write failed]`.trim() }).eq("id", order.id);
+    await supabase
+      .from("orders")
+      .update({ status: "cancelled", comment: `${comment ?? ""} [stock write failed]`.trim() })
+      .eq("id", order.id);
     return json({ ok: false, reason: "stock_write_failed", order_id: order.id }, 500);
   }
 
-  return json({ ok: true, order_id: order.id, total_amount: order.total_amount, status: order.status, items: lines });
+  return json({
+    ok: true,
+    order_id: order.id,
+    total_amount: order.total_amount,
+    status: order.status,
+    items: lines,
+    ...cur,
+  });
 }
 
 // ---------------------------------------------------------------- router
 
 export async function handleAgentApi(request: Request, url: URL): Promise<Response> {
   // shared-secret auth (enforced only when AGENT_TOOL_SECRET is set).
-  // Accepts the secret via the "x-agent-secret" header OR a "?k=" query param,
-  // so Retell tools can authenticate without custom headers.
+  // Accepts the secret via the "x-agent-secret" header OR a "?k=" query param.
   const secret = process.env.AGENT_TOOL_SECRET;
   if (secret) {
     const provided = request.headers.get("x-agent-secret") ?? url.searchParams.get("k");
@@ -366,6 +474,7 @@ export async function handleAgentApi(request: Request, url: URL): Promise<Respon
   const path = url.pathname.replace(/\/+$/, "");
   if (path.endsWith("/api/agent/search-products")) return searchProducts(supabase, args);
   if (path.endsWith("/api/agent/check-availability")) return checkAvailability(supabase, args);
+  if (path.endsWith("/api/agent/check-delivery")) return checkDelivery(supabase, args);
   if (path.endsWith("/api/agent/create-order")) return createOrder(supabase, args);
   if (path.endsWith("/api/agent/pharmacy-info")) return pharmacyInfo(supabase);
   return json({ error: "unknown_tool" }, 404);
