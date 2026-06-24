@@ -6,6 +6,7 @@ import { LiveMonitor } from "@/components/operator-scene";
 import callCenterEn from "@/assets/call-center-en.jpg";
 import { useI18n } from "@/i18n";
 import { useVoiceAgent } from "@/lib/use-voice-agent";
+import { CallGateModal } from "@/components/CallGateModal";
 
 const STAGE_LINES = [
   "Processing order…",
@@ -56,6 +57,7 @@ function HomePage() {
           : null;
   const [chatValue, setChatValue] = useState("");
   const [chatFocused, setChatFocused] = useState(false);
+  const [gateOpen, setGateOpen] = useState(false);
 
   return (
     <div className="relative min-h-screen overflow-hidden">
@@ -316,9 +318,7 @@ function HomePage() {
             {/* The CTA */}
             <div className="mt-6 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
               <button
-                onClick={() =>
-                  voice.isLive ? voice.stop() : voice.start()
-                }
+                onClick={() => (voice.isLive ? voice.stop() : setGateOpen(true))}
                 aria-busy={voice.isConnecting}
                 className={`group relative inline-flex min-w-[19.5rem] items-center justify-center gap-3 rounded-full px-7 py-4 text-sm font-semibold transition-all ${
                   active
@@ -352,6 +352,14 @@ function HomePage() {
                     : voiceError ?? t("home.caption.idle")}
               </span>
             </div>
+
+            <CallGateModal
+              open={gateOpen}
+              onClose={() => setGateOpen(false)}
+              onStartCall={voice.start}
+              callStatus={voice.status}
+              callErrorDetail={voice.errorDetail}
+            />
 
             {/* TEXT CHAT — sits right under the talk button */}
             <form
