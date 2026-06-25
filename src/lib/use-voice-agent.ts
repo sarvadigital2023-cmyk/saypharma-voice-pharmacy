@@ -7,9 +7,9 @@ export type VoiceStatus = "idle" | "connecting" | "live" | "error";
 export type VoiceError = "not-configured" | "mic" | "failed" | null;
 
 // Silence watchdog: if neither the customer nor the agent makes a sound, warn at
-// 12s and end the call at 20s so the call never bills while nobody is talking.
-const SILENCE_WARN_MS = 12_000;
-const SILENCE_HANGUP_MS = 20_000;
+// 5s and end the call at 10s so the call never bills while nobody is talking.
+const SILENCE_WARN_MS = 5_000;
+const SILENCE_HANGUP_MS = 10_000;
 
 /**
  * Drives a Retell web voice call (agent "Cimo").
