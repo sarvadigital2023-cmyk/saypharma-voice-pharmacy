@@ -3,6 +3,7 @@ import { AudioLines, Copy, Check } from "lucide-react";
 
 import { useI18n } from "@/i18n";
 import type { TranscriptEntry } from "@/lib/use-voice-agent";
+import { formatTranscriptText } from "@/lib/call-history";
 
 /**
  * "Текст разговора" — live transcript of the voice call.
@@ -38,7 +39,11 @@ export function LiveTranscript({
     role === "agent" ? t("transcript.roleAgent") : t("transcript.roleUser");
 
   const copyAll = async () => {
-    const text = transcript.map((m) => `${roleLabel(m.role)}: ${m.content}`).join("\n");
+    const text = formatTranscriptText(
+      transcript,
+      t("transcript.roleAgent"),
+      t("transcript.roleUser"),
+    );
     try {
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
       else {

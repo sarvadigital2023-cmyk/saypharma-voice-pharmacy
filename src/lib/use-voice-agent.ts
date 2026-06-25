@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RetellWebClient } from "retell-client-js-sdk";
 
 import { createWebCall } from "./retell";
+import { saveCallTranscript, formatTranscriptText, extractPhones } from "./call-history";
+import { useI18n } from "@/i18n";
 
 export type VoiceStatus = "idle" | "connecting" | "live" | "error";
 export type VoiceError = "not-configured" | "mic" | "failed" | null;
@@ -47,6 +49,32 @@ export function useVoiceAgent() {
   const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hangupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // refs used when persisting the call on call_ended (closures see latest values)
+  const { t } = useI18n();
+  const transcriptRef = useRef<TranscriptEntry[]>([]);
+  const callStartRef = useRef<number | null>(null);
+  const savedRef = useRef(false);
+  const silenceEndedRef = useRef(false);
+  const labelsRef = useRef({ agent: "Operator", user: "You" });
+  labelsRef.current = { agent: t("transcript.roleAgent"), user: t("transcript.roleUser") };
+
+  // Persist the finished call once. status: "completed" normally, "missed" when
+  // the silence watchdog ended it. Only saves a non-empty transcript.
+  const saveCall = useCallback((status: "completed" | "missed") => {
+    if (savedRef.current) return;
+    const entries = transcriptRef.current;
+    if (!entries || entries.length === 0) return;
+    savedRef.current = true;
+    const text = formatTranscriptText(entries, labelsRef.current.agent, labelsRef.current.user);
+    const phone = extractPhones(text);
+    const durationSec = callStartRef.current
+      ? Math.max(1, Math.round((Date.now() - callStartRef.current) / 1000))
+      : null;
+    void saveCallTranscript({
+      data: { phone, transcript: text, durationSec, status, agentName: "Cimo" },
+    }).catch((e) => console.error("save transcript failed:", e));
+  }, []);
+
   const clearSilenceTimers = useCallback(() => {
     if (warnTimerRef.current) {
       clearTimeout(warnTimerRef.current);
@@ -66,6 +94,7 @@ export function useVoiceAgent() {
     hangupTimerRef.current = setTimeout(() => {
       clearSilenceTimers();
       setSilenceWarning(false);
+      silenceEndedRef.current = true; // mark this end as "missed" for call_ended
       try {
         clientRef.current?.stopCall();
       } catch {
@@ -80,12 +109,15 @@ export function useVoiceAgent() {
     const { RetellWebClient } = await import("retell-client-js-sdk");
     const client = new RetellWebClient();
     client.on("call_started", () => {
+      callStartRef.current = Date.now();
       setStatus("live");
       bumpSilenceTimers();
     });
     client.on("call_ended", () => {
       clearSilenceTimers();
       setSilenceWarning(false);
+      saveCall(silenceEndedRef.current ? "missed" : "completed");
+      silenceEndedRef.current = false;
       setStatus("idle");
     });
     client.on("error", (e: unknown) => {
@@ -104,20 +136,27 @@ export function useVoiceAgent() {
     client.on("update", (payload: unknown) => {
       bumpSilenceTimers();
       const entries = parseTranscript(payload);
-      if (entries) setTranscript(entries);
+      if (entries) {
+        transcriptRef.current = entries;
+        setTranscript(entries);
+      }
     });
     const onActivity = () => bumpSilenceTimers();
     client.on("agent_start_talking", onActivity);
     client.on("agent_stop_talking", onActivity);
     clientRef.current = client;
     return client;
-  }, [bumpSilenceTimers, clearSilenceTimers]);
+  }, [bumpSilenceTimers, clearSilenceTimers, saveCall]);
 
   const start = useCallback(async () => {
     setError(null);
     setErrorDetail(null);
     setSilenceWarning(false);
     setTranscript([]);
+    transcriptRef.current = [];
+    callStartRef.current = null;
+    savedRef.current = false;
+    silenceEndedRef.current = false;
     setStatus("connecting");
     try {
       const client = await ensureClient();
