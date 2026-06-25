@@ -59,6 +59,7 @@ export const messages: Record<Locale, Messages> = {
     "voice.notConfigured": "Голосовой агент ещё не подключён.",
     "voice.mic": "Разрешите доступ к микрофону.",
     "voice.failed": "Не удалось начать разговор. Попробуйте ещё раз.",
+    "voice.silenceWarning": "Разговор завершается из-за тишины…",
 
     "gate.subtitle": "Подключение к оператору",
     "gate.cancel": "Отмена",
@@ -187,6 +188,7 @@ export const messages: Record<Locale, Messages> = {
     "voice.notConfigured": "Голосовий агент ще не підключений.",
     "voice.mic": "Дозвольте доступ до мікрофона.",
     "voice.failed": "Не вдалося почати розмову. Спробуйте ще раз.",
+    "voice.silenceWarning": "Розмова завершується через тишу…",
 
     "gate.subtitle": "З'єднання з оператором",
     "gate.cancel": "Скасувати",
@@ -315,6 +317,7 @@ export const messages: Record<Locale, Messages> = {
     "voice.notConfigured": "Voice agent is not configured yet.",
     "voice.mic": "Please allow microphone access.",
     "voice.failed": "Couldn't start the call. Please try again.",
+    "voice.silenceWarning": "Ending the call due to silence…",
 
     "gate.subtitle": "Connecting to an operator",
     "gate.cancel": "Cancel",

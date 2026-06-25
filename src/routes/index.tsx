@@ -344,11 +344,21 @@ function HomePage() {
                     : t("home.cta.start")}
               </button>
 
-              <span className={`text-xs ${voiceError ? "text-destructive" : "text-muted-foreground"}`}>
+              <span
+                className={`text-xs ${
+                  voiceError
+                    ? "text-destructive"
+                    : talking && voice.silenceWarning
+                      ? "text-amber-400"
+                      : "text-muted-foreground"
+                }`}
+              >
                 {voice.isConnecting
                   ? t("home.caption.connecting")
                   : talking
-                    ? t("home.caption.talking")
+                    ? voice.silenceWarning
+                      ? t("voice.silenceWarning")
+                      : t("home.caption.talking")
                     : voiceError ?? t("home.caption.idle")}
               </span>
             </div>
