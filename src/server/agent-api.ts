@@ -188,7 +188,10 @@ async function geocode(address: string): Promise<{ lat: number; lon: number } | 
 type Movement = { product_id: string; type: string; quantity: number | null };
 
 /** Stock = sum(quantity where type='in') − sum(quantity where type='out'). */
-async function stockFor(supabase: SupabaseClient, productIds: string[]): Promise<Map<string, number>> {
+async function stockFor(
+  supabase: SupabaseClient,
+  productIds: string[],
+): Promise<Map<string, number>> {
   const map = new Map<string, number>(productIds.map((id) => [id, 0]));
   if (productIds.length === 0) return map;
   const { data } = await supabase
@@ -206,7 +209,9 @@ async function stockFor(supabase: SupabaseClient, productIds: string[]): Promise
 // ---------------------------------------------------------------- tools
 
 async function searchProducts(supabase: SupabaseClient, args: Record<string, unknown>) {
-  const raw = String(args.query ?? args.name ?? "").trim().slice(0, 80);
+  const raw = String(args.query ?? args.name ?? "")
+    .trim()
+    .slice(0, 80);
   // strip characters that have meaning inside a PostgREST or() filter
   const q = raw.replace(/[,()*%]/g, " ").trim();
 
@@ -315,7 +320,8 @@ async function checkDelivery(supabase: SupabaseClient, args: Record<string, unkn
 
   let distanceKm = num(args.distance_km);
   if (distanceKm == null) {
-    if (lat == null || lon == null) return json({ ...base, ok: false, reason: "location_required" });
+    if (lat == null || lon == null)
+      return json({ ...base, ok: false, reason: "location_required" });
     if (s.latitude == null || s.longitude == null)
       return json({ ...base, ok: false, reason: "pharmacy_location_unset" });
     distanceKm = haversineKm(s.latitude, s.longitude, lat, lon);
@@ -328,7 +334,11 @@ async function checkDelivery(supabase: SupabaseClient, args: Record<string, unkn
 
 type OrderItemIn = { product_id?: unknown; quantity?: unknown };
 
-async function createOrder(supabase: SupabaseClient, args: Record<string, unknown>) {
+async function createOrder(
+  supabase: SupabaseClient,
+  args: Record<string, unknown>,
+  callId: string | null = null,
+) {
   const customer = asObject(args.customer);
   const phone = String(args.phone ?? customer.phone ?? "").trim();
   const fullName = (args.full_name ?? customer.full_name ?? null) as string | null;
@@ -344,7 +354,10 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
   if (rawItems.length === 0) return json({ ok: false, reason: "no_items", currency });
 
   const items = rawItems
-    .map((it) => ({ product_id: String(it.product_id ?? ""), quantity: Math.floor(Number(it.quantity ?? 0)) }))
+    .map((it) => ({
+      product_id: String(it.product_id ?? ""),
+      quantity: Math.floor(Number(it.quantity ?? 0)),
+    }))
     .filter((it) => it.product_id && it.quantity > 0);
   if (items.length === 0) return json({ ok: false, reason: "no_valid_items", currency });
 
@@ -362,14 +375,22 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
   const lines: Array<{ product_id: string; name: string; quantity: number; price: number }> = [];
   for (const it of items) {
     const p = byId.get(it.product_id);
-    if (!p) return json({ ok: false, reason: "product_not_found", product_id: it.product_id, currency });
-    if (Boolean(p.prescription_required))
+    if (!p)
+      return json({ ok: false, reason: "product_not_found", product_id: it.product_id, currency });
+    if (p.prescription_required)
       return json({ ok: false, reason: "prescription_required", product: p.name, currency });
     const price = num(p.price);
     if (price == null) return json({ ok: false, reason: "no_price", product: p.name, currency });
     const inStock = stocks.get(it.product_id) ?? 0;
     if (inStock < it.quantity)
-      return json({ ok: false, reason: "insufficient_stock", product: p.name, in_stock: inStock, requested: it.quantity, currency });
+      return json({
+        ok: false,
+        reason: "insufficient_stock",
+        product: p.name,
+        in_stock: inStock,
+        requested: it.quantity,
+        currency,
+      });
     lines.push({ product_id: it.product_id, name: String(p.name), quantity: it.quantity, price });
   }
 
@@ -388,22 +409,38 @@ async function createOrder(supabase: SupabaseClient, args: Record<string, unknow
     });
   }
 
-  // create the order
-  const { data: order, error: orderErr } = await supabase
+  // create the order (link it to the call via call_id)
+  const orderRow = {
+    phone,
+    full_name: fullName,
+    address,
+    payment_method: paymentMethod,
+    comment,
+    items: lines,
+    total_amount: total,
+    status: "new",
+  };
+  let order: { id: unknown; total_amount: unknown; status: unknown } | null = null;
+  const first = await supabase
     .from("orders")
-    .insert({
-      phone,
-      full_name: fullName,
-      address,
-      payment_method: paymentMethod,
-      comment,
-      items: lines,
-      total_amount: total,
-      status: "new",
-    })
+    .insert({ ...orderRow, call_id: callId })
     .select("id,total_amount,status")
     .single();
-  if (orderErr || !order) return json({ error: "order_create_failed" }, 500);
+  if (first.error) {
+    // Safety net: if the call_id column is missing/rejected, still create the
+    // order without it rather than failing the customer's order.
+    console.error("orders insert with call_id failed, retrying without it:", first.error.message);
+    const retry = await supabase
+      .from("orders")
+      .insert(orderRow)
+      .select("id,total_amount,status")
+      .single();
+    if (retry.error || !retry.data) return json({ error: "order_create_failed" }, 500);
+    order = retry.data;
+  } else {
+    order = first.data;
+  }
+  if (!order) return json({ error: "order_create_failed" }, 500);
 
   // write the stock-out movements
   const { error: moveErr } = await supabase.from("stock_movements").insert(
@@ -456,12 +493,16 @@ export async function handleAgentApi(request: Request, url: URL): Promise<Respon
   // Retell wraps arguments in { name, args, call }. Accept that or a plain body.
   const wrapper = asObject(body);
   const args = wrapper.args && typeof wrapper.args === "object" ? asObject(wrapper.args) : wrapper;
+  // Unique id of THIS call — same id the browser got from create-web-call. Used
+  // to link the order to its conversation transcript. Defensive on the path.
+  const callObj = asObject(wrapper.call);
+  const callId = str(callObj.call_id) ?? str(wrapper.call_id);
 
   const path = url.pathname.replace(/\/+$/, "");
   if (path.endsWith("/api/agent/search-products")) return searchProducts(supabase, args);
   if (path.endsWith("/api/agent/check-availability")) return checkAvailability(supabase, args);
   if (path.endsWith("/api/agent/check-delivery")) return checkDelivery(supabase, args);
-  if (path.endsWith("/api/agent/create-order")) return createOrder(supabase, args);
+  if (path.endsWith("/api/agent/create-order")) return createOrder(supabase, args, callId);
   if (path.endsWith("/api/agent/pharmacy-info")) return pharmacyInfo(supabase);
   return json({ error: "unknown_tool" }, 404);
 }

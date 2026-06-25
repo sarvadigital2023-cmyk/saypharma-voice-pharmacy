@@ -48,6 +48,7 @@ export type SaveCallInput = {
   durationSec: number | null;
   status: string;
   agentName?: string | null;
+  callId?: string | null;
 };
 
 export const saveCallTranscript = createServerFn({ method: "POST" })
@@ -60,6 +61,7 @@ export const saveCallTranscript = createServerFn({ method: "POST" })
         : Math.max(0, Math.round(Number(data.durationSec))),
     status: String(data?.status ?? "completed") || "completed",
     agentName: data?.agentName ?? "Cimo",
+    callId: data?.callId ?? null,
   }))
   .handler(async ({ data }): Promise<{ ok: boolean; reason?: string }> => {
     const url = process.env.SUPABASE_URL;
@@ -73,6 +75,7 @@ export const saveCallTranscript = createServerFn({ method: "POST" })
       duration_sec: data.durationSec,
       status: data.status,
       agent_name: data.agentName,
+      call_id: data.callId,
       // order_id and summary intentionally left null for now
     });
     if (error) {

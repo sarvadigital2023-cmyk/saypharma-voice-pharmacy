@@ -53,6 +53,7 @@ export function useVoiceAgent() {
   const { t } = useI18n();
   const transcriptRef = useRef<TranscriptEntry[]>([]);
   const callStartRef = useRef<number | null>(null);
+  const callIdRef = useRef<string | null>(null);
   const savedRef = useRef(false);
   const silenceEndedRef = useRef(false);
   const labelsRef = useRef({ agent: "Operator", user: "You" });
@@ -71,7 +72,14 @@ export function useVoiceAgent() {
       ? Math.max(1, Math.round((Date.now() - callStartRef.current) / 1000))
       : null;
     void saveCallTranscript({
-      data: { phone, transcript: text, durationSec, status, agentName: "Cimo" },
+      data: {
+        phone,
+        transcript: text,
+        durationSec,
+        status,
+        agentName: "Cimo",
+        callId: callIdRef.current,
+      },
     }).catch((e) => console.error("save transcript failed:", e));
   }, []);
 
@@ -155,12 +163,14 @@ export function useVoiceAgent() {
     setTranscript([]);
     transcriptRef.current = [];
     callStartRef.current = null;
+    callIdRef.current = null;
     savedRef.current = false;
     silenceEndedRef.current = false;
     setStatus("connecting");
     try {
       const client = await ensureClient();
-      const { accessToken } = await createWebCall();
+      const { accessToken, callId } = await createWebCall();
+      callIdRef.current = callId ?? null;
       await client.startCall({ accessToken });
     } catch (e) {
       console.error(e);
