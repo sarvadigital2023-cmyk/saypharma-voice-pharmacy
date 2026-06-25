@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill, Settings, Send } from "lucide-react";
+import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill, Settings } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { LiveMonitor } from "@/components/operator-scene";
 import callCenterEn from "@/assets/call-center-en.jpg";
 import { useI18n } from "@/i18n";
 import { useVoiceAgent } from "@/lib/use-voice-agent";
 import { CallGateModal } from "@/components/CallGateModal";
+import { LiveTranscript } from "@/components/LiveTranscript";
 
 const STAGE_LINES = [
   "Processing order…",
@@ -55,8 +56,6 @@ function HomePage() {
         : voice.error
           ? `${t("voice.failed")}${voice.errorDetail ? ` (${voice.errorDetail})` : ""}`
           : null;
-  const [chatValue, setChatValue] = useState("");
-  const [chatFocused, setChatFocused] = useState(false);
   const [gateOpen, setGateOpen] = useState(false);
 
   return (
@@ -371,47 +370,8 @@ function HomePage() {
               callErrorDetail={voice.errorDetail}
             />
 
-            {/* TEXT CHAT — sits right under the talk button */}
-            <form
-              onSubmit={(e) => e.preventDefault()}
-              className="mt-5 w-full max-w-lg rounded-2xl border border-border bg-card/40 p-3 backdrop-blur-sm"
-            >
-              <div className="px-1 pb-2 text-[11px] font-medium text-muted-foreground/70">
-                {t("chat.label")}
-              </div>
-
-              {/* Sample agent message keeps the area at a natural 1–2 message height */}
-              <div className="mb-2.5 flex">
-                <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-secondary/70 px-3 py-2 text-sm text-foreground/90">
-                  {t("chat.greeting")}
-                </div>
-              </div>
-
-              {/* Input row with a blinking cursor + send */}
-              <div className="relative flex items-center gap-2 rounded-xl border border-border bg-background/60 px-3 py-2.5 transition focus-within:border-primary/50">
-                {chatValue === "" && !chatFocused && (
-                  <span className="pointer-events-none animate-caret text-foreground/60">▍</span>
-                )}
-                <input
-                  type="text"
-                  value={chatValue}
-                  onChange={(e) => setChatValue(e.target.value)}
-                  onFocus={() => setChatFocused(true)}
-                  onBlur={() => setChatFocused(false)}
-                  placeholder={t("chat.placeholder")}
-                  aria-label={t("chat.label")}
-                  enterKeyHint="send"
-                  className="min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/60"
-                />
-                <button
-                  type="submit"
-                  aria-label={t("chat.send")}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-accent text-primary-foreground transition hover:opacity-90"
-                >
-                  <Send className="h-4 w-4" />
-                </button>
-              </div>
-            </form>
+            {/* Live transcript of the call — sits right under the talk button */}
+            <LiveTranscript transcript={voice.transcript} isLive={voice.isLive} />
 
             <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
               {t("home.h1a")}

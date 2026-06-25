@@ -5,6 +5,19 @@ import { createWebCall } from "./retell";
 
 export type VoiceStatus = "idle" | "connecting" | "live" | "error";
 export type VoiceError = "not-configured" | "mic" | "failed" | null;
+export type TranscriptEntry = { role: string; content: string };
+
+/** The Retell "update" event carries the full cumulative transcript. */
+function parseTranscript(payload: unknown): TranscriptEntry[] | null {
+  const list = (payload as { transcript?: unknown } | null)?.transcript;
+  if (!Array.isArray(list)) return null;
+  return list
+    .map((m) => ({
+      role: String((m as { role?: unknown })?.role ?? ""),
+      content: String((m as { content?: unknown })?.content ?? ""),
+    }))
+    .filter((m) => m.content.trim().length > 0);
+}
 
 // Silence watchdog: if neither the customer nor the agent makes a sound, warn at
 // 5s and end the call at 10s so the call never bills while nobody is talking.
@@ -29,6 +42,7 @@ export function useVoiceAgent() {
   // raw reason (e.g. "RETELL_CALL_FAILED:401") for on-screen diagnostics
   const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [silenceWarning, setSilenceWarning] = useState(false);
+  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
 
   const warnTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hangupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -86,9 +100,13 @@ export function useVoiceAgent() {
         /* ignore */
       }
     });
-    // any speech from either side resets the watchdog
+    // live transcript + activity reset (the "update" event carries the transcript)
+    client.on("update", (payload: unknown) => {
+      bumpSilenceTimers();
+      const entries = parseTranscript(payload);
+      if (entries) setTranscript(entries);
+    });
     const onActivity = () => bumpSilenceTimers();
-    client.on("update", onActivity);
     client.on("agent_start_talking", onActivity);
     client.on("agent_stop_talking", onActivity);
     clientRef.current = client;
@@ -99,6 +117,7 @@ export function useVoiceAgent() {
     setError(null);
     setErrorDetail(null);
     setSilenceWarning(false);
+    setTranscript([]);
     setStatus("connecting");
     try {
       const client = await ensureClient();
@@ -147,6 +166,7 @@ export function useVoiceAgent() {
     error,
     errorDetail,
     silenceWarning,
+    transcript,
     start,
     stop,
     isLive: status === "live",
