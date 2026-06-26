@@ -9,7 +9,7 @@ export type VoiceStatus = "idle" | "connecting" | "live" | "error";
 export type VoiceError = "not-configured" | "mic" | "failed" | null;
 export type TranscriptEntry = { role: string; content: string };
 
-/** The Retell "update" event carries the full cumulative transcript. */
+/** The Retell "update" event carries the transcript so far. */
 function parseTranscript(payload: unknown): TranscriptEntry[] | null {
   const list = (payload as { transcript?: unknown } | null)?.transcript;
   if (!Array.isArray(list)) return null;
@@ -19,6 +19,15 @@ function parseTranscript(payload: unknown): TranscriptEntry[] | null {
       content: String((m as { content?: unknown })?.content ?? ""),
     }))
     .filter((m) => m.content.trim().length > 0);
+}
+
+/** Completeness of a transcript = total characters of speech. Used to keep the
+ * fullest version we ever receive instead of overwriting it with a later (often
+ * shorter) "update", which was dropping the start of the conversation. */
+function transcriptChars(entries: TranscriptEntry[]): number {
+  let total = 0;
+  for (const e of entries) total += e.content.length;
+  return total;
 }
 
 // Silence watchdog: if neither the customer nor the agent makes a sound, warn at
@@ -144,7 +153,12 @@ export function useVoiceAgent() {
     client.on("update", (payload: unknown) => {
       bumpSilenceTimers();
       const entries = parseTranscript(payload);
-      if (entries) {
+      if (!entries) return;
+      // Keep the MOST COMPLETE transcript we've seen. Retell sometimes sends a
+      // shorter/partial "update"; overwriting with it lost the start of the call.
+      // Only adopt an incoming transcript when it has at least as much speech as
+      // what we already hold, so the stored conversation never shrinks.
+      if (transcriptChars(entries) >= transcriptChars(transcriptRef.current)) {
         transcriptRef.current = entries;
         setTranscript(entries);
       }
