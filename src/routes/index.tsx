@@ -413,9 +413,6 @@ function HomePage() {
           <h2 className="font-display text-2xl font-semibold sm:text-3xl">
             {t("how.title")}
           </h2>
-          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
-            {t("how.subtitle")}
-          </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {[
