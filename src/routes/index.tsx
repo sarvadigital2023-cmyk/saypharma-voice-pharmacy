@@ -473,8 +473,8 @@ function HomePage() {
           <div className="flex gap-5">
             <a href="#" className="hover:text-foreground">{t("footer.license")}</a>
             <a href="#" className="hover:text-foreground">{t("footer.policy")}</a>
-            <a href="mailto:hi@saypharma.app" className="hover:text-foreground">
-              hi@saypharma.app
+            <a href="mailto:saypharma@zohomail.eu" className="hover:text-foreground">
+              saypharma@zohomail.eu
             </a>
           </div>
         </div>
