@@ -46,7 +46,7 @@ export const messages: Record<Locale, Messages> = {
     "home.lead":
       "SayPharma — это аптека, где не нужно искать товар вручную. Поговорите с ИИ-оператором голосом — он найдёт препарат, проверит наличие и оформит доставку за минуту.",
     "home.trust.licensed": "Лицензированные поставщики",
-    "home.trust.delivery": "Доставка за 60 минут",
+    "home.trust.delivery": "Срочная доставка",
     "home.trust.ai247": "ИИ работает 24/7",
 
     "transcript.title": "Текст разговора",
