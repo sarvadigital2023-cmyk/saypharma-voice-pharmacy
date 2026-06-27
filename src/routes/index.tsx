@@ -408,6 +408,52 @@ function HomePage() {
           </div>
         </div>
 
+        {/* WHAT WE SELL — neon category cards, styled like the live terminal panel */}
+        <section className="mt-10 flex justify-center">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card/80 p-5 shadow-[var(--shadow-panel)] backdrop-blur-xl">
+            <div className="flex items-center gap-2 border-b border-border/60 pb-3">
+              <span className="h-2.5 w-2.5 rounded-full bg-destructive/80" />
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-400/80" />
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
+              <span className="ml-auto font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                saypharma · shop
+              </span>
+            </div>
+
+            <h3 className="mt-4 text-base font-semibold text-foreground">{t("sell.title")}</h3>
+
+            <div className="mt-3 flex flex-col gap-3">
+              {[
+                { key: "sell.c1", c: "#3b9bff" }, // blue
+                { key: "sell.c2", c: "#ff8a3d" }, // orange
+                { key: "sell.c3", c: "#ffd23f" }, // yellow
+                { key: "sell.c4", c: "#ff5bd0" }, // pink
+                { key: "sell.c5", c: "#b366ff" }, // purple
+              ].map((cat) => (
+                <div
+                  key={cat.key}
+                  className="flex items-center gap-3 rounded-xl border bg-black/30 px-4 py-3.5"
+                  style={{
+                    borderColor: `${cat.c}66`,
+                    boxShadow: `0 0 16px ${cat.c}3d, inset 0 0 14px ${cat.c}1f`,
+                  }}
+                >
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full"
+                    style={{ background: cat.c, boxShadow: `0 0 10px ${cat.c}, 0 0 18px ${cat.c}` }}
+                  />
+                  <span
+                    className="text-[15px] font-semibold"
+                    style={{ color: cat.c, textShadow: `0 0 10px ${cat.c}80` }}
+                  >
+                    {t(cat.key)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* HOW IT WORKS */}
         <section id="how" className="mt-24">
           <h2 className="font-display text-2xl font-semibold sm:text-3xl">

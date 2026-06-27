@@ -49,6 +49,13 @@ export const messages: Record<Locale, Messages> = {
     "home.trust.delivery": "Срочная доставка",
     "home.trust.ai247": "ИИ работает 24/7",
 
+    "sell.title": "Что мы продаём",
+    "sell.c1": "Лекарства и медицинские товары",
+    "sell.c2": "Товары для детей и мам",
+    "sell.c3": "Витамины и БАДы",
+    "sell.c4": "Косметика и уход за лицом",
+    "sell.c5": "Интимная гигиена",
+
     "transcript.title": "Текст разговора",
     "transcript.live": "В эфире",
     "transcript.idle": "Не в эфире",
@@ -182,6 +189,13 @@ export const messages: Record<Locale, Messages> = {
     "home.trust.delivery": "Термінова доставка",
     "home.trust.ai247": "ШІ працює 24/7",
 
+    "sell.title": "Що ми продаємо",
+    "sell.c1": "Ліки та медичні товари",
+    "sell.c2": "Товари для дітей та мам",
+    "sell.c3": "Вітаміни та БАДи",
+    "sell.c4": "Косметика та догляд за обличчям",
+    "sell.c5": "Інтимна гігієна",
+
     "transcript.title": "Текст розмови",
     "transcript.live": "В ефірі",
     "transcript.idle": "Не в ефірі",
@@ -314,6 +328,13 @@ export const messages: Record<Locale, Messages> = {
     "home.trust.licensed": "Licensed suppliers",
     "home.trust.delivery": "Express delivery",
     "home.trust.ai247": "AI works 24/7",
+
+    "sell.title": "What we sell",
+    "sell.c1": "Medicines & medical supplies",
+    "sell.c2": "Products for kids & moms",
+    "sell.c3": "Vitamins & supplements",
+    "sell.c4": "Cosmetics & facial care",
+    "sell.c5": "Intimate hygiene",
 
     "transcript.title": "Conversation text",
     "transcript.live": "Live",
