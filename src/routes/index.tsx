@@ -420,7 +420,12 @@ function HomePage() {
               </span>
             </div>
 
-            <h3 className="mt-4 text-base font-semibold text-foreground">{t("sell.title")}</h3>
+            <h3
+              className="mt-4 text-2xl font-bold tracking-tight"
+              style={{ color: "#ff3b3b", textShadow: "0 0 14px rgba(255,59,59,0.6)" }}
+            >
+              {t("sell.title")}
+            </h3>
 
             <div className="mt-3 flex flex-col gap-3">
               {[
@@ -443,7 +448,7 @@ function HomePage() {
                     style={{ background: cat.c, boxShadow: `0 0 10px ${cat.c}, 0 0 18px ${cat.c}` }}
                   />
                   <span
-                    className="text-[15px] font-semibold"
+                    className="text-lg font-semibold"
                     style={{ color: cat.c, textShadow: `0 0 10px ${cat.c}80` }}
                   >
                     {t(cat.key)}
