@@ -404,7 +404,7 @@ function HomePage() {
 
           {/* Right: live monitor panel */}
           <div className="relative flex justify-center lg:justify-end">
-            <LiveMonitor running={talking} />
+            <LiveMonitor />
           </div>
         </div>
 

@@ -33,10 +33,7 @@ export function Operator({ id, active, x, scale, delay = 0 }: OperatorProps) {
           : `brightness(${0.45 + scale * 0.28}) saturate(0.85) blur(${(1 - scale) * 0.6}px)`,
       }}
     >
-      <div
-        className="relative animate-float-soft"
-        style={{ animationDelay: `${delay}s` }}
-      >
+      <div className="relative animate-float-soft" style={{ animationDelay: `${delay}s` }}>
         {/* Glow halo when active — teal/cyan luminescent */}
         {active && (
           <>
@@ -56,8 +53,7 @@ export function Operator({ id, active, x, scale, delay = 0 }: OperatorProps) {
             <div
               className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-[-30px] h-10 w-56 rounded-[100%] opacity-80"
               style={{
-                background:
-                  "radial-gradient(ellipse, oklch(0.85 0.20 200 / 0.6), transparent 70%)",
+                background: "radial-gradient(ellipse, oklch(0.85 0.20 200 / 0.6), transparent 70%)",
                 filter: "blur(8px)",
               }}
             />
@@ -170,7 +166,12 @@ export function Operator({ id, active, x, scale, delay = 0 }: OperatorProps) {
               fill="none"
               strokeLinecap="round"
             />
-            <circle cx="156" cy="145" r="2.5" fill={active ? "var(--glow)" : "oklch(0.5 0.05 230)"} />
+            <circle
+              cx="156"
+              cy="145"
+              r="2.5"
+              fill={active ? "var(--glow)" : "oklch(0.5 0.05 230)"}
+            />
 
             {/* rim light when active */}
             {active && (
@@ -181,14 +182,7 @@ export function Operator({ id, active, x, scale, delay = 0 }: OperatorProps) {
               />
             )}
             {active && (
-              <ellipse
-                cx="155"
-                cy="112"
-                rx="22"
-                ry="26"
-                fill={`url(#rim-${id})`}
-                opacity="0.7"
-              />
+              <ellipse cx="155" cy="112" rx="22" ry="26" fill={`url(#rim-${id})`} opacity="0.7" />
             )}
           </g>
 
@@ -208,18 +202,16 @@ export function Operator({ id, active, x, scale, delay = 0 }: OperatorProps) {
   );
 }
 
-export function LiveMonitor({ running }: { running: boolean }) {
-  const { t, tList } = useI18n();
+export function LiveMonitor() {
+  const { tList, locale } = useI18n();
   const stages = tList("live.stages");
   const [stage, setStage] = useState(0);
   const [typed, setTyped] = useState("");
 
+  // Always-on "live terminal": types the current stage, then advances to the
+  // next one in a loop — independent of any call. `locale` is a dependency so a
+  // language switch restarts the line in the new language.
   useEffect(() => {
-    if (!running) {
-      setStage(0);
-      setTyped("");
-      return;
-    }
     let i = 0;
     setTyped("");
     const text = stages[stage] ?? "";
@@ -236,7 +228,7 @@ export function LiveMonitor({ running }: { running: boolean }) {
       clearTimeout(next);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage, running]);
+  }, [stage, locale]);
 
   return (
     <div className="relative w-full max-w-md rounded-2xl border border-border bg-card/80 p-5 backdrop-blur-xl shadow-[var(--shadow-panel)]">
@@ -256,35 +248,26 @@ export function LiveMonitor({ running }: { running: boolean }) {
             <span>{s}</span>
           </div>
         ))}
-        {running && (
-          <div className="flex items-start gap-2 text-foreground">
-            <span className="text-glow">▸</span>
-            <span>
-              {typed}
-              <span className="animate-caret">▍</span>
-            </span>
-          </div>
-        )}
-        {!running && (
-          <div className="text-muted-foreground/60 italic">
-            {t("live.idle")}
-          </div>
-        )}
-      </div>
-
-      {running && (
-        <div className="mt-4 flex items-center gap-2">
-          <div className="flex-1 h-1 rounded-full bg-secondary overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
-              style={{ width: `${((stage + 1) / stages.length) * 100}%` }}
-            />
-          </div>
-          <span className="font-mono text-[10px] text-muted-foreground">
-            {stage + 1}/{stages.length}
+        <div className="flex items-start gap-2 text-foreground">
+          <span className="text-glow">▸</span>
+          <span>
+            {typed}
+            <span className="animate-caret">▍</span>
           </span>
         </div>
-      )}
+      </div>
+
+      <div className="mt-4 flex items-center gap-2">
+        <div className="flex-1 h-1 rounded-full bg-secondary overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
+            style={{ width: `${((stage + 1) / stages.length) * 100}%` }}
+          />
+        </div>
+        <span className="font-mono text-[10px] text-muted-foreground">
+          {stage + 1}/{stages.length}
+        </span>
+      </div>
     </div>
   );
 }
