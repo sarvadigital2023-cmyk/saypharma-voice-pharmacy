@@ -56,6 +56,10 @@ export const messages: Record<Locale, Messages> = {
     "sell.c4": "Косметика и уход за лицом",
     "sell.c5": "Интимная гигиена",
 
+    "contact.title": "Наша аптека",
+    "contact.address": "Адрес аптеки",
+    "contact.phones": "Контактные телефоны",
+
     "transcript.title": "Текст разговора",
     "transcript.live": "В эфире",
     "transcript.idle": "Не в эфире",
@@ -196,6 +200,10 @@ export const messages: Record<Locale, Messages> = {
     "sell.c4": "Косметика та догляд за обличчям",
     "sell.c5": "Інтимна гігієна",
 
+    "contact.title": "Наша аптека",
+    "contact.address": "Адреса аптеки",
+    "contact.phones": "Контактні телефони",
+
     "transcript.title": "Текст розмови",
     "transcript.live": "В ефірі",
     "transcript.idle": "Не в ефірі",
@@ -335,6 +343,10 @@ export const messages: Record<Locale, Messages> = {
     "sell.c3": "Vitamins & supplements",
     "sell.c4": "Cosmetics & facial care",
     "sell.c5": "Intimate hygiene",
+
+    "contact.title": "Our pharmacy",
+    "contact.address": "Pharmacy address",
+    "contact.phones": "Contact phone numbers",
 
     "transcript.title": "Conversation text",
     "transcript.live": "Live",

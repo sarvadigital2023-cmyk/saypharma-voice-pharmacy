@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Mic, MicOff, ShieldCheck, Sparkles, Truck, Pill, Settings } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { LiveMonitor } from "@/components/operator-scene";
+import { PharmacyContact } from "@/components/PharmacyContact";
 import callCenterEn from "@/assets/call-center-en.jpg";
 import { useI18n } from "@/i18n";
 import { useVoiceAgent } from "@/lib/use-voice-agent";
@@ -458,6 +459,9 @@ function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* OUR PHARMACY — address + phones, live from pharmacy_settings */}
+        <PharmacyContact />
 
         {/* HOW IT WORKS */}
         <section id="how" className="mt-24">

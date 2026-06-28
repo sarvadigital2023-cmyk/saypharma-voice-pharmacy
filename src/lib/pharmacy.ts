@@ -112,3 +112,35 @@ export const checkClientDeliveryZone = createServerFn({ method: "POST" })
     const distance = Math.round(haversineKm(plat, plon, clat, clon) * 10) / 10;
     return { ...base, configured: true, in_zone: distance <= radius, distance_km: distance };
   });
+
+/**
+ * Public pharmacy contact info for the website (address + phones). Read live from
+ * pharmacy_settings with the service-role key on the server; only safe fields
+ * reach the browser. Change them in the admin and the site updates on reload.
+ */
+export type PharmacyContact = {
+  pharmacy_address: string | null;
+  phone1: string | null;
+  phone2: string | null;
+};
+
+export const getPharmacyContact = createServerFn({ method: "GET" }).handler(
+  async (): Promise<PharmacyContact> => {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return { pharmacy_address: null, phone1: null, phone2: null };
+
+    const supabase = createClient(url, key, { auth: { persistSession: false } });
+    const { data } = await supabase
+      .from("pharmacy_settings")
+      .select("pharmacy_address,phone1,phone2")
+      .limit(1)
+      .maybeSingle();
+    const s = (data ?? {}) as Record<string, unknown>;
+    return {
+      pharmacy_address: toStr(s.pharmacy_address),
+      phone1: toStr(s.phone1),
+      phone2: toStr(s.phone2),
+    };
+  },
+);
