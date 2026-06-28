@@ -65,6 +65,10 @@ export function useVoiceAgent() {
   const callIdRef = useRef<string | null>(null);
   const savedRef = useRef(false);
   const silenceEndedRef = useRef(false);
+  // true while the agent is mid-utterance — the silence watchdog must NOT run
+  // then, otherwise a single long reply (e.g. dictating an order number) is
+  // mistaken for silence and the call is cut off while the agent is speaking.
+  const agentTalkingRef = useRef(false);
   const labelsRef = useRef({ agent: "Operator", user: "You" });
   labelsRef.current = { agent: t("transcript.roleAgent"), user: t("transcript.roleUser") };
 
@@ -107,6 +111,9 @@ export function useVoiceAgent() {
   const bumpSilenceTimers = useCallback(() => {
     clearSilenceTimers();
     setSilenceWarning(false);
+    // While the agent is speaking, the call is clearly alive — do not arm the
+    // watchdog (a stray "update" during a long reply must not restart it).
+    if (agentTalkingRef.current) return;
     warnTimerRef.current = setTimeout(() => setSilenceWarning(true), SILENCE_WARN_MS);
     hangupTimerRef.current = setTimeout(() => {
       clearSilenceTimers();
@@ -163,9 +170,19 @@ export function useVoiceAgent() {
         setTranscript(entries);
       }
     });
-    const onActivity = () => bumpSilenceTimers();
-    client.on("agent_start_talking", onActivity);
-    client.on("agent_stop_talking", onActivity);
+    // Pause the watchdog for the WHOLE duration of the agent's speech, not just
+    // at its start: stop the countdown when the agent begins talking and only
+    // resume it once the agent has finished. This is what prevents the call from
+    // being cut off mid-reply (e.g. while dictating the order number).
+    client.on("agent_start_talking", () => {
+      agentTalkingRef.current = true;
+      clearSilenceTimers();
+      setSilenceWarning(false);
+    });
+    client.on("agent_stop_talking", () => {
+      agentTalkingRef.current = false;
+      bumpSilenceTimers();
+    });
     clientRef.current = client;
     return client;
   }, [bumpSilenceTimers, clearSilenceTimers, saveCall]);
@@ -180,6 +197,7 @@ export function useVoiceAgent() {
     callIdRef.current = null;
     savedRef.current = false;
     silenceEndedRef.current = false;
+    agentTalkingRef.current = false;
     setStatus("connecting");
     try {
       const client = await ensureClient();
