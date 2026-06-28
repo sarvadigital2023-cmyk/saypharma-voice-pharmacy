@@ -59,11 +59,13 @@ export const messages: Record<Locale, Messages> = {
     "contact.title": "Наша аптека",
     "contact.address": "Адрес аптеки",
     "contact.phones": "Контактные телефоны",
+    "contact.hours": "График работы",
 
     "transcript.title": "Текст разговора",
     "transcript.live": "В эфире",
     "transcript.idle": "Не в эфире",
-    "transcript.empty": "Нажмите «Поговорить с SayPharma» — и здесь появится текст вашего разговора.",
+    "transcript.empty":
+      "Нажмите «Поговорить с SayPharma» — и здесь появится текст вашего разговора.",
     "transcript.roleAgent": "Оператор",
     "transcript.roleUser": "Вы",
     "transcript.copy": "Скопировать весь разговор",
@@ -88,8 +90,10 @@ export const messages: Record<Locale, Messages> = {
     "gate.geo.title": "Определяем ваше местоположение",
     "gate.geo.desc": "Это нужно, чтобы проверить, доставляем ли мы в ваш район.",
     "gate.geo.deniedTitle": "Нужен доступ к геолокации",
-    "gate.geo.deniedDesc": "Чтобы оформить доставку, разрешите доступ к местоположению и попробуйте снова.",
-    "gate.geo.unavailableDesc": "Не удалось определить местоположение. Пожалуйста, попробуйте ещё раз.",
+    "gate.geo.deniedDesc":
+      "Чтобы оформить доставку, разрешите доступ к местоположению и попробуйте снова.",
+    "gate.geo.unavailableDesc":
+      "Не удалось определить местоположение. Пожалуйста, попробуйте ещё раз.",
     "gate.zone.title": "Проверяем зону доставки",
     "gate.zone.desc": "Одну секунду…",
     "gate.zone.outTitle": "Вне зоны доставки",
@@ -97,7 +101,8 @@ export const messages: Record<Locale, Messages> = {
     "gate.mic.title": "Доступ к микрофону",
     "gate.mic.desc": "Разрешите доступ к микрофону, чтобы поговорить с оператором.",
     "gate.mic.deniedTitle": "Нужен доступ к микрофону",
-    "gate.mic.deniedDesc": "Для разговора с оператором нужен микрофон. Разрешите доступ и попробуйте снова.",
+    "gate.mic.deniedDesc":
+      "Для разговора с оператором нужен микрофон. Разрешите доступ и попробуйте снова.",
     "gate.call.title": "Соединяем с оператором…",
     "gate.call.desc": "Пожалуйста, подождите.",
     "gate.call.errorTitle": "Не удалось начать разговор",
@@ -112,7 +117,8 @@ export const messages: Record<Locale, Messages> = {
     "how.s2.t": "Подтвердите подбор",
     "how.s2.d": "Оператор уточнит дозировку, бренд и сравнит с тем, что уже есть на складе.",
     "how.s3.t": "Получите доставку",
-    "how.s3.d": "Курьер привезёт заказ в ближайшее время. Предварительно созвонится с вами. Оплата картой или наличными.",
+    "how.s3.d":
+      "Курьер привезёт заказ в ближайшее время. Предварительно созвонится с вами. Оплата картой или наличными.",
 
     "trust.titleA": "Аптечная точность.",
     "trust.titleB": "Скорость разговора.",
@@ -203,6 +209,7 @@ export const messages: Record<Locale, Messages> = {
     "contact.title": "Наша аптека",
     "contact.address": "Адреса аптеки",
     "contact.phones": "Контактні телефони",
+    "contact.hours": "Графік роботи",
 
     "transcript.title": "Текст розмови",
     "transcript.live": "В ефірі",
@@ -232,8 +239,10 @@ export const messages: Record<Locale, Messages> = {
     "gate.geo.title": "Визначаємо ваше місцезнаходження",
     "gate.geo.desc": "Це потрібно, щоб перевірити, чи доставляємо ми у ваш район.",
     "gate.geo.deniedTitle": "Потрібен доступ до геолокації",
-    "gate.geo.deniedDesc": "Щоб оформити доставку, дозвольте доступ до місцезнаходження та спробуйте знову.",
-    "gate.geo.unavailableDesc": "Не вдалося визначити місцезнаходження. Будь ласка, спробуйте ще раз.",
+    "gate.geo.deniedDesc":
+      "Щоб оформити доставку, дозвольте доступ до місцезнаходження та спробуйте знову.",
+    "gate.geo.unavailableDesc":
+      "Не вдалося визначити місцезнаходження. Будь ласка, спробуйте ще раз.",
     "gate.zone.title": "Перевіряємо зону доставки",
     "gate.zone.desc": "Одну секунду…",
     "gate.zone.outTitle": "Поза зоною доставки",
@@ -241,7 +250,8 @@ export const messages: Record<Locale, Messages> = {
     "gate.mic.title": "Доступ до мікрофона",
     "gate.mic.desc": "Дозвольте доступ до мікрофона, щоб поговорити з оператором.",
     "gate.mic.deniedTitle": "Потрібен доступ до мікрофона",
-    "gate.mic.deniedDesc": "Для розмови з оператором потрібен мікрофон. Дозвольте доступ і спробуйте знову.",
+    "gate.mic.deniedDesc":
+      "Для розмови з оператором потрібен мікрофон. Дозвольте доступ і спробуйте знову.",
     "gate.call.title": "З'єднуємо з оператором…",
     "gate.call.desc": "Будь ласка, зачекайте.",
     "gate.call.errorTitle": "Не вдалося почати розмову",
@@ -252,11 +262,13 @@ export const messages: Record<Locale, Messages> = {
     "how.title": "Від розмови до доставки лише три кроки",
     "how.subtitle": "Жодних карток, фільтрів і форм оплати — усе вирішується в розмові.",
     "how.s1.t": "Скажіть, що потрібно",
-    "how.s1.d": "«Потрібен парацетамол і вітамін D на місяць» — ШІ розпізнає навіть складні запити.",
+    "how.s1.d":
+      "«Потрібен парацетамол і вітамін D на місяць» — ШІ розпізнає навіть складні запити.",
     "how.s2.t": "Підтвердіть підбір",
     "how.s2.d": "Оператор уточнить дозування, бренд і порівняє з тим, що вже є на складі.",
     "how.s3.t": "Отримайте доставку",
-    "how.s3.d": "Кур'єр привезе замовлення найближчим часом. Попередньо зателефонує вам. Оплата карткою або готівкою.",
+    "how.s3.d":
+      "Кур'єр привезе замовлення найближчим часом. Попередньо зателефонує вам. Оплата карткою або готівкою.",
 
     "trust.titleA": "Аптечна точність.",
     "trust.titleB": "Швидкість розмови.",
@@ -347,6 +359,7 @@ export const messages: Record<Locale, Messages> = {
     "contact.title": "Our pharmacy",
     "contact.address": "Pharmacy address",
     "contact.phones": "Contact phone numbers",
+    "contact.hours": "Working hours",
 
     "transcript.title": "Conversation text",
     "transcript.live": "Live",
@@ -385,7 +398,8 @@ export const messages: Record<Locale, Messages> = {
     "gate.mic.title": "Microphone access",
     "gate.mic.desc": "Please allow microphone access to talk to the operator.",
     "gate.mic.deniedTitle": "Microphone access needed",
-    "gate.mic.deniedDesc": "Talking to the operator needs a microphone. Please allow access and try again.",
+    "gate.mic.deniedDesc":
+      "Talking to the operator needs a microphone. Please allow access and try again.",
     "gate.call.title": "Connecting you to the operator…",
     "gate.call.desc": "Please wait.",
     "gate.call.errorTitle": "Couldn't start the call",
@@ -394,13 +408,17 @@ export const messages: Record<Locale, Messages> = {
     "gate.contactPhone": "Phone: {phone}",
 
     "how.title": "From conversation to delivery in just three steps",
-    "how.subtitle": "No cards, filters or payment forms — everything is handled in the conversation.",
+    "how.subtitle":
+      "No cards, filters or payment forms — everything is handled in the conversation.",
     "how.s1.t": "Say what you need",
-    "how.s1.d": "“I need paracetamol and vitamin D for a month” — the AI understands even complex requests.",
+    "how.s1.d":
+      "“I need paracetamol and vitamin D for a month” — the AI understands even complex requests.",
     "how.s2.t": "Confirm the selection",
-    "how.s2.d": "The operator clarifies dosage and brand and compares it with what's already in stock.",
+    "how.s2.d":
+      "The operator clarifies dosage and brand and compares it with what's already in stock.",
     "how.s3.t": "Get the delivery",
-    "how.s3.d": "A courier will deliver your order shortly. They'll call you beforehand. Payment by card or cash.",
+    "how.s3.d":
+      "A courier will deliver your order shortly. They'll call you beforehand. Payment by card or cash.",
 
     "trust.titleA": "Pharmacy precision.",
     "trust.titleB": "Conversation speed.",

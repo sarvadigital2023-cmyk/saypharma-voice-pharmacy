@@ -31,6 +31,7 @@ export function PharmacyContact() {
 
   const address = data?.pharmacy_address ?? null;
   const phones = [data?.phone1, data?.phone2].filter(Boolean) as string[];
+  const workingHours = data?.working_hours ?? null;
 
   return (
     <section className="mt-10 flex justify-center">
@@ -88,6 +89,19 @@ export function PharmacyContact() {
                   —
                 </span>
               )}
+            </div>
+          </div>
+
+          {/* working hours */}
+          <div>
+            <div className="text-sm font-semibold" style={{ color: BLUE }}>
+              {t("contact.hours")}
+            </div>
+            <div
+              className="mt-1 text-lg font-semibold"
+              style={{ color: GREEN, textShadow: `0 0 10px ${GREEN}66` }}
+            >
+              {workingHours ?? "—"}
             </div>
           </div>
         </div>

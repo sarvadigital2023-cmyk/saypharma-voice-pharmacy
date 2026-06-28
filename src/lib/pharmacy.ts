@@ -122,18 +122,20 @@ export type PharmacyContact = {
   pharmacy_address: string | null;
   phone1: string | null;
   phone2: string | null;
+  working_hours: string | null;
 };
 
 export const getPharmacyContact = createServerFn({ method: "GET" }).handler(
   async (): Promise<PharmacyContact> => {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) return { pharmacy_address: null, phone1: null, phone2: null };
+    if (!url || !key)
+      return { pharmacy_address: null, phone1: null, phone2: null, working_hours: null };
 
     const supabase = createClient(url, key, { auth: { persistSession: false } });
     const { data } = await supabase
       .from("pharmacy_settings")
-      .select("pharmacy_address,phone1,phone2")
+      .select("pharmacy_address,phone1,phone2,working_hours")
       .limit(1)
       .maybeSingle();
     const s = (data ?? {}) as Record<string, unknown>;
@@ -141,6 +143,7 @@ export const getPharmacyContact = createServerFn({ method: "GET" }).handler(
       pharmacy_address: toStr(s.pharmacy_address),
       phone1: toStr(s.phone1),
       phone2: toStr(s.phone2),
+      working_hours: toStr(s.working_hours),
     };
   },
 );
