@@ -37,7 +37,7 @@ export const messages: Record<Locale, Messages> = {
     "nav.settings": "Настройки",
 
     "home.badge": "Голосовая аптека · SayPharma",
-    "home.cta.start": "Поговорить с SayPharma",
+    "home.cta.start": "Поговорить с SayPharma и сделать заказ",
     "home.cta.stop": "Завершить разговор",
     "home.caption.talking": "Идёт разговор · слушаю вас",
     "home.caption.idle": "Бесплатно · без регистрации",
@@ -187,7 +187,7 @@ export const messages: Record<Locale, Messages> = {
     "nav.settings": "Налаштування",
 
     "home.badge": "Голосова аптека · SayPharma",
-    "home.cta.start": "Поговорити з SayPharma",
+    "home.cta.start": "Поговорити з SayPharma і зробити замовлення",
     "home.cta.stop": "Завершити розмову",
     "home.caption.talking": "Триває розмова · слухаю вас",
     "home.caption.idle": "Безкоштовно · без реєстрації",
@@ -337,7 +337,7 @@ export const messages: Record<Locale, Messages> = {
     "nav.settings": "Settings",
 
     "home.badge": "Voice pharmacy · SayPharma",
-    "home.cta.start": "Talk to SayPharma",
+    "home.cta.start": "Talk to SayPharma and place an order",
     "home.cta.stop": "End call",
     "home.caption.talking": "In conversation · listening to you",
     "home.caption.idle": "Free · no sign-up",
