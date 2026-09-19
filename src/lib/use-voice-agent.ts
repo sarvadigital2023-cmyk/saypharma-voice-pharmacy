@@ -13,12 +13,17 @@ export type TranscriptEntry = { role: string; content: string };
 function parseTranscript(payload: unknown): TranscriptEntry[] | null {
   const list = (payload as { transcript?: unknown } | null)?.transcript;
   if (!Array.isArray(list)) return null;
-  return list
-    .map((m) => ({
-      role: String((m as { role?: unknown })?.role ?? ""),
-      content: String((m as { content?: unknown })?.content ?? ""),
-    }))
-    .filter((m) => m.content.trim().length > 0);
+  return (
+    list
+      .map((m) => ({
+        role: String((m as { role?: unknown })?.role ?? ""),
+        content: String((m as { content?: unknown })?.content ?? ""),
+      }))
+      // v3 mixes tool_call_invocation / tool_call_result / node_transition / dtmf
+      // entries into the transcript array. Keep only real speech, otherwise tool
+      // output is stored (and shown) as if the customer had said it.
+      .filter((m) => (m.role === "agent" || m.role === "user") && m.content.trim().length > 0)
+  );
 }
 
 /** Completeness of a transcript = total characters of speech. Used to keep the
@@ -85,11 +90,17 @@ export function useVoiceAgent() {
   labelsRef.current = { agent: t("transcript.roleAgent"), user: t("transcript.roleUser") };
 
   // Persist the finished call once. status: "completed" normally, "missed" when
-  // the silence watchdog ended it. Only saves a non-empty transcript.
+  // the silence watchdog ended it. Always saves a record for a connected call —
+  // the server fills in the transcript from Retell when the browser has none.
   const saveCall = useCallback((status: "completed" | "missed") => {
     if (savedRef.current) return;
-    const entries = transcriptRef.current;
-    if (!entries || entries.length === 0) return;
+    // Only skip calls that never actually connected. An EMPTY transcript is not a
+    // reason to skip: the browser may simply have received no transcript events
+    // (v3 "gateway" transport), and the server then recovers the real transcript
+    // from Retell by call_id. Bailing out here is what left the admin with no
+    // record of the call at all.
+    if (callStartRef.current == null) return;
+    const entries = transcriptRef.current ?? [];
     savedRef.current = true;
     const text = formatTranscriptText(entries, labelsRef.current.agent, labelsRef.current.user);
     const phone = extractPhones(text);
@@ -104,6 +115,8 @@ export function useVoiceAgent() {
         status,
         agentName: "Cimo",
         callId: callIdRef.current,
+        agentLabel: labelsRef.current.agent,
+        userLabel: labelsRef.current.user,
       },
     }).catch((e) => console.error("save transcript failed:", e));
   }, []);
