@@ -31,7 +31,9 @@ export const createWebCall = createServerFn({ method: "POST" }).handler(async ()
 
   let res: Response;
   try {
-    res = await fetch("https://api.retellai.com/v2/create-web-call", {
+    // v3 endpoint: /v2/create-web-call is deprecated (removal 2026-09-30). The
+    // request body is unchanged from v2 — only the version in the path moves.
+    res = await fetch("https://api.retellai.com/v3/create-web-call", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -52,6 +54,21 @@ export const createWebCall = createServerFn({ method: "POST" }).handler(async ()
     throw new Error(`RETELL_CALL_FAILED:${res.status}`);
   }
 
-  const result = (await res.json()) as { access_token: string; call_id: string };
-  return { accessToken: result.access_token, callId: result.call_id };
+  // v3 returns the same essentials as v2 — a short-lived access token and the
+  // call id. Parse tolerantly (accept snake_case or camelCase) so a minor
+  // field-name change in v3 can't silently break the call; fail loudly if the
+  // access token is missing rather than handing the SDK an undefined token.
+  const result = (await res.json()) as {
+    access_token?: string;
+    accessToken?: string;
+    call_id?: string;
+    callId?: string;
+  };
+  const accessToken = result.access_token ?? result.accessToken;
+  const callId = result.call_id ?? result.callId ?? null;
+  if (!accessToken) {
+    console.error("Retell create-web-call returned no access token");
+    throw new Error("RETELL_CALL_FAILED:no_access_token");
+  }
+  return { accessToken, callId };
 });
