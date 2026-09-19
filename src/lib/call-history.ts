@@ -219,32 +219,28 @@ export const saveCallTranscript = createServerFn({ method: "POST" })
       const phone = data.phone !== "unknown" ? data.phone : extractPhones(transcript);
 
       const supabase = createClient(url, key, { auth: { persistSession: false } });
-      // The Retell webhook may already have created this call's row while the
-      // conversation was running — update it instead of inserting a duplicate.
+      // The Retell webhook keeps this call's row up to date while the
+      // conversation runs, so update it rather than inserting a duplicate. Update
+      // first and insert only when nothing matched — both writers can land in the
+      // same millisecond, and call_id is unique, so this is the race-safe order.
       if (data.callId) {
-        const { data: existing } = await supabase
+        const fields = {
+          phone,
+          transcript: transcript || null,
+          duration_sec: data.durationSec,
+          status: data.status,
+          agent_name: data.agentName,
+        };
+        const updated = await supabase
           .from("call_transcripts")
-          .select("id")
+          .update(fields)
           .eq("call_id", data.callId)
-          .limit(1)
-          .maybeSingle();
-        if (existing?.id) {
-          const { error: updateError } = await supabase
-            .from("call_transcripts")
-            .update({
-              phone,
-              transcript: transcript || null,
-              duration_sec: data.durationSec,
-              status: data.status,
-              agent_name: data.agentName,
-            })
-            .eq("id", existing.id);
-          if (updateError) {
-            console.error("saveCallTranscript update failed:", updateError.message);
-            return { ok: false, reason: "db_error", entries };
-          }
-          return { ok: true, entries };
+          .select("id");
+        if (updated.error) {
+          console.error("saveCallTranscript update failed:", updated.error.message);
+          return { ok: false, reason: "db_error", entries };
         }
+        if ((updated.data?.length ?? 0) > 0) return { ok: true, entries };
       }
       const { error } = await supabase.from("call_transcripts").insert({
         phone,
@@ -256,7 +252,23 @@ export const saveCallTranscript = createServerFn({ method: "POST" })
         // order_id and summary intentionally left null for now
       });
       if (error) {
-        console.error("saveCallTranscript failed:", error.message);
+        if (error.code === "23505" && data.callId) {
+          // the webhook created the row between our update and our insert
+          const retry = await supabase
+            .from("call_transcripts")
+            .update({
+              phone,
+              transcript: transcript || null,
+              duration_sec: data.durationSec,
+              status: data.status,
+              agent_name: data.agentName,
+            })
+            .eq("call_id", data.callId);
+          if (!retry.error) return { ok: true, entries };
+          console.error("saveCallTranscript retry failed:", retry.error.message);
+          return { ok: false, reason: "db_error", entries };
+        }
+        console.error(`saveCallTranscript failed (${error.code ?? "?"}):`, error.message);
         return { ok: false, reason: "db_error", entries };
       }
       return { ok: true, entries };

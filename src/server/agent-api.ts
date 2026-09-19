@@ -480,21 +480,52 @@ const LIVE_USER_LABEL = "Вы";
 
 /** Keep real speech only — Retell mixes tool_call_invocation / tool_call_result /
  * node_transition / dtmf entries into the same transcript array. */
-function transcriptText(call: Record<string, unknown>): string {
-  const list = call.transcript_object ?? call.transcript_with_tool_calls;
-  if (Array.isArray(list)) {
-    const text = list
-      .map((u) => asObject(u))
-      .filter((u) => u.role === "agent" || u.role === "user")
-      .map(
-        (u) =>
-          `${u.role === "agent" ? LIVE_AGENT_LABEL : LIVE_USER_LABEL}: ${str(u.content) ?? ""}`,
-      )
-      .filter((line) => line.split(": ").slice(1).join(": ").trim().length > 0)
-      .join("\n");
-    if (text.trim().length > 0) return text;
+/** Keys Retell has used for the utterance list, in preference order. */
+const TRANSCRIPT_KEYS = [
+  "transcript_object",
+  "transcript_with_tool_calls",
+  "transcripts",
+  "utterances",
+  "transcript",
+] as const;
+
+function renderUtterances(list: unknown[]): string {
+  return list
+    .map((u) => asObject(u))
+    .filter((u) => u.role === "agent" || u.role === "user")
+    .map((u) => {
+      const said = str(u.content) ?? str(u.text) ?? "";
+      return `${u.role === "agent" ? LIVE_AGENT_LABEL : LIVE_USER_LABEL}: ${said}`;
+    })
+    .filter((line) => line.split(": ").slice(1).join(": ").trim().length > 0)
+    .join("\n");
+}
+
+/**
+ * Pull the conversation out of a webhook body.
+ *
+ * The end-of-call events (call_ended / call_analyzed) carry it as
+ * `call.transcript_object`, but the in-call `transcript_updated` event does NOT
+ * put it there — looking only inside `call` is why every live delivery answered
+ * 200 with nothing written. So search the body itself, `call` and `data`, across
+ * every key Retell is known to use, before giving up.
+ */
+function transcriptText(body: Record<string, unknown>): string {
+  const sources = [body, asObject(body.call), asObject(body.data)];
+  for (const source of sources) {
+    for (const key of TRANSCRIPT_KEYS) {
+      const value = source[key];
+      if (!Array.isArray(value) || value.length === 0) continue;
+      const text = renderUtterances(value);
+      if (text.trim().length > 0) return text;
+    }
   }
-  return str(call.transcript) ?? "";
+  // plain-string form of the same field
+  for (const source of sources) {
+    const plain = str(source.transcript);
+    if (plain && plain.trim().length > 0) return plain;
+  }
+  return "";
 }
 
 /**
@@ -517,43 +548,66 @@ async function retellWebhook(supabase: SupabaseClient, body: Record<string, unkn
   const callId = str(call.call_id) ?? str(body.call_id);
   if (!callId) return json({ ok: false, reason: "call_id_required" }, 400);
 
-  const text = transcriptText(call);
-  if (text.trim().length === 0) return json({ ok: true, skipped: "empty_transcript", event });
-
-  // One row per call: update the existing one, insert it the first time.
-  const { data: existing } = await supabase
-    .from("call_transcripts")
-    .select("id")
-    .eq("call_id", callId)
-    .limit(1)
-    .maybeSingle();
-
-  if (existing?.id) {
-    const { error } = await supabase
-      .from("call_transcripts")
-      .update({ transcript: text })
-      .eq("id", existing.id);
-    if (error) {
-      console.error(`webhook transcript update failed (${error.code ?? "?"}):`, error.message);
-      return json({ ok: false, reason: "db_error", detail: error.message }, 500);
-    }
-    return json({ ok: true, event, updated: true });
+  const text = transcriptText(body);
+  if (text.trim().length === 0) {
+    // Name the shape we could not read, so a payload change diagnoses itself
+    // instead of silently answering 200 with nothing stored.
+    console.warn(
+      `webhook ${event}: no transcript found. body keys=[${Object.keys(body).join(",")}] ` +
+        `call keys=[${Object.keys(call).join(",")}]`,
+    );
+    return json({ ok: true, skipped: "empty_transcript", event });
   }
+
+  // One row per call (enforced by the unique index on call_id). Update first and
+  // only insert when nothing was updated; if the end-of-call save inserts at the
+  // same instant we lose the race with a 23505 and simply update instead. The
+  // update touches ONLY the transcript, so the phone and duration written at the
+  // end of the call are never clobbered by a late webhook.
+  const updated = await supabase
+    .from("call_transcripts")
+    .update({ transcript: text })
+    .eq("call_id", callId)
+    .select("id");
+  if (updated.error) {
+    console.error(
+      `webhook transcript update failed (${updated.error.code ?? "?"}):`,
+      updated.error.message,
+    );
+    return json({ ok: false, reason: "db_error", detail: updated.error.message }, 500);
+  }
+  if ((updated.data?.length ?? 0) > 0) return json({ ok: true, event, updated: true });
 
   // status is constrained to 'completed' | 'missed' | 'failed'
   // (call_transcripts_status_check) — there is no "in progress" value, and
   // inventing one made every webhook insert fail with a CHECK violation. The
   // end-of-call save sets the real final status on this same row.
-  const { error } = await supabase.from("call_transcripts").insert({
+  const inserted = await supabase.from("call_transcripts").insert({
     phone: "unknown",
     transcript: text,
     status: "completed",
     agent_name: "Cimo",
     call_id: callId,
   });
-  if (error) {
-    console.error(`webhook transcript insert failed (${error.code ?? "?"}):`, error.message);
-    return json({ ok: false, reason: "db_error", detail: error.message }, 500);
+  if (inserted.error) {
+    if (inserted.error.code === "23505") {
+      // the row appeared between our update and our insert — update it
+      const retry = await supabase
+        .from("call_transcripts")
+        .update({ transcript: text })
+        .eq("call_id", callId);
+      if (!retry.error) return json({ ok: true, event, updated: true });
+      console.error(
+        `webhook transcript retry failed (${retry.error.code ?? "?"}):`,
+        retry.error.message,
+      );
+      return json({ ok: false, reason: "db_error", detail: retry.error.message }, 500);
+    }
+    console.error(
+      `webhook transcript insert failed (${inserted.error.code ?? "?"}):`,
+      inserted.error.message,
+    );
+    return json({ ok: false, reason: "db_error", detail: inserted.error.message }, 500);
   }
   return json({ ok: true, event, created: true });
 }
