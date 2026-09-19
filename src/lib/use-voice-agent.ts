@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RetellWebClient } from "retell-client-js-sdk";
 
 import { createWebCall } from "./retell";
-import { saveCallTranscript, formatTranscriptText, extractPhones } from "./call-history";
+import {
+  saveCallTranscript,
+  getLiveTranscript,
+  formatTranscriptText,
+  extractPhones,
+} from "./call-history";
 import { useI18n } from "@/i18n";
 
 export type VoiceStatus = "idle" | "connecting" | "live" | "error";
@@ -54,6 +59,9 @@ function transcriptChars(entries: TranscriptEntry[]): number {
 // 5s and end the call at 10s so the call never bills while nobody is talking.
 const SILENCE_WARN_MS = 5_000;
 const SILENCE_HANGUP_MS = 10_000;
+
+// How often the in-call panel refreshes the transcript from our own database.
+const LIVE_TRANSCRIPT_POLL_MS = 2_000;
 
 /**
  * Ask Retell for the LiveKit transport instead of whatever v3 negotiates.
@@ -121,7 +129,7 @@ export function useVoiceAgent() {
   // parseUtterances). `seq` preserves arrival order for equal timestamps.
   const utterancesRef = useRef(new Map<string, Utterance & { seq: number }>());
   const seqRef = useRef(0);
-  const liveStreamRef = useRef<EventSource | null>(null);
+  const livePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const labelsRef = useRef({ agent: "Operator", user: "You" });
   labelsRef.current = { agent: t("transcript.roleAgent"), user: t("transcript.roleUser") };
 
@@ -193,68 +201,37 @@ export function useVoiceAgent() {
   );
 
   const stopLiveTranscript = useCallback(() => {
-    liveStreamRef.current?.close();
-    liveStreamRef.current = null;
+    if (livePollRef.current) {
+      clearInterval(livePollRef.current);
+      livePollRef.current = null;
+    }
   }, []);
 
   /**
-   * Subscribe to the server's live-transcript bridge.
+   * Live transcript during the call.
    *
-   * The SDK data channel cannot deliver the transcript on this account (gateway
-   * transport), so the server relays Retell's monitor socket to us over SSE.
-   * Purely additive: if it never connects, the transcript is still recovered
-   * from Retell once the call ends, exactly as before.
+   * Retell pushes "transcript_updated" webhooks to our server, which keeps this
+   * call's row up to date; here we just read that row. Polling OUR OWN database
+   * is cheap and stateless — unlike holding a socket open, it actually works on
+   * a serverless host. Purely additive: if the webhook is not configured the
+   * transcript is still recovered from Retell when the call ends.
    */
   const startLiveTranscript = useCallback(
     (callId: string) => {
       stopLiveTranscript();
-      if (typeof EventSource === "undefined") return;
-      try {
-        const es = new EventSource(`/api/transcript-stream?callId=${encodeURIComponent(callId)}`);
-        liveStreamRef.current = es;
-        es.onmessage = (ev) => {
-          try {
-            const msg = JSON.parse(ev.data) as {
-              entries?: Array<{ role: string; content: string; id?: string; time_sec?: number }>;
-              ended?: boolean;
-              error?: string;
-            };
-            if (msg.error) {
-              console.warn("live transcript stream:", msg.error);
-              return;
-            }
-            if (msg.ended) {
-              stopLiveTranscript();
-              return;
-            }
-            if (!msg.entries?.length) return;
-            // Merge by id like every other transcript source, so snapshots and
-            // incremental updates both land correctly.
-            mergeUtterances(
-              msg.entries.map((u, i) => {
-                const time = Number.isFinite(Number(u.time_sec)) ? Number(u.time_sec) : i;
-                return {
-                  id: u.id ?? `${u.role}@${time}#${i}`,
-                  time,
-                  role: u.role,
-                  content: u.content,
-                };
-              }),
-            );
-          } catch {
-            /* ignore a malformed frame; the next snapshot resynchronises */
-          }
-        };
-        // EventSource reconnects on its own when the serverless function hits
-        // its time limit; Retell replays a full snapshot on connect.
-        es.onerror = () => {
-          /* handled by EventSource's own retry */
-        };
-      } catch (e) {
-        console.warn("live transcript stream unavailable:", e);
-      }
+      const tick = () => {
+        void getLiveTranscript({ data: { callId } })
+          .then((entries) => {
+            if (entries.length > 0) applyTranscript(entries);
+          })
+          .catch(() => {
+            /* transient — the next tick retries */
+          });
+      };
+      tick();
+      livePollRef.current = setInterval(tick, LIVE_TRANSCRIPT_POLL_MS);
     },
-    [mergeUtterances, stopLiveTranscript],
+    [applyTranscript, stopLiveTranscript],
   );
 
   const clearSilenceTimers = useCallback(() => {

@@ -470,6 +470,90 @@ async function createOrder(
   });
 }
 
+// ---------------------------------------------------------------- live transcript
+
+// Speaker labels used for the transcript stored DURING the call. The end-of-call
+// save rewrites the row with the labels of the language the customer is using;
+// these are the defaults the admin already displays.
+const LIVE_AGENT_LABEL = "Оператор";
+const LIVE_USER_LABEL = "Вы";
+
+/** Keep real speech only — Retell mixes tool_call_invocation / tool_call_result /
+ * node_transition / dtmf entries into the same transcript array. */
+function transcriptText(call: Record<string, unknown>): string {
+  const list = call.transcript_object ?? call.transcript_with_tool_calls;
+  if (Array.isArray(list)) {
+    const text = list
+      .map((u) => asObject(u))
+      .filter((u) => u.role === "agent" || u.role === "user")
+      .map(
+        (u) =>
+          `${u.role === "agent" ? LIVE_AGENT_LABEL : LIVE_USER_LABEL}: ${str(u.content) ?? ""}`,
+      )
+      .filter((line) => line.split(": ").slice(1).join(": ").trim().length > 0)
+      .join("\n");
+    if (text.trim().length > 0) return text;
+  }
+  return str(call.transcript) ?? "";
+}
+
+/**
+ * Retell webhook — the only way to get a LIVE transcript on a serverless host.
+ *
+ * The browser SDK cannot deliver it on this account (gateway transport, and the
+ * legacy client does not understand v3's transcript_snapshot/transcript_updated),
+ * and Retell's monitor WebSocket needs the secret key held open for the whole
+ * call, which a serverless function cannot do. So we let Retell PUSH instead:
+ * with webhook_events including "transcript_updated" it calls this endpoint
+ * every time the transcript grows, and we keep one row per call up to date.
+ *
+ * Configure on the Retell agent:
+ *   webhook_url    = https://<domain>/api/agent/retell-webhook?k=<AGENT_TOOL_SECRET>
+ *   webhook_events = call_started, transcript_updated, call_ended, call_analyzed
+ */
+async function retellWebhook(supabase: SupabaseClient, body: Record<string, unknown>) {
+  const event = str(body.event) ?? "";
+  const call = asObject(body.call);
+  const callId = str(call.call_id) ?? str(body.call_id);
+  if (!callId) return json({ ok: false, reason: "call_id_required" }, 400);
+
+  const text = transcriptText(call);
+  if (text.trim().length === 0) return json({ ok: true, skipped: "empty_transcript", event });
+
+  // One row per call: update the existing one, insert it the first time.
+  const { data: existing } = await supabase
+    .from("call_transcripts")
+    .select("id")
+    .eq("call_id", callId)
+    .limit(1)
+    .maybeSingle();
+
+  if (existing?.id) {
+    const { error } = await supabase
+      .from("call_transcripts")
+      .update({ transcript: text })
+      .eq("id", existing.id);
+    if (error) {
+      console.error("webhook transcript update failed:", error.message);
+      return json({ ok: false, reason: "db_error" }, 500);
+    }
+    return json({ ok: true, event, updated: true });
+  }
+
+  const { error } = await supabase.from("call_transcripts").insert({
+    phone: "unknown",
+    transcript: text,
+    status: event === "call_ended" || event === "call_analyzed" ? "completed" : "ongoing",
+    agent_name: "Cimo",
+    call_id: callId,
+  });
+  if (error) {
+    console.error("webhook transcript insert failed:", error.message);
+    return json({ ok: false, reason: "db_error" }, 500);
+  }
+  return json({ ok: true, event, created: true });
+}
+
 // ---------------------------------------------------------------- router
 
 export async function handleAgentApi(request: Request, url: URL): Promise<Response> {
@@ -504,5 +588,6 @@ export async function handleAgentApi(request: Request, url: URL): Promise<Respon
   if (path.endsWith("/api/agent/check-delivery")) return checkDelivery(supabase, args);
   if (path.endsWith("/api/agent/create-order")) return createOrder(supabase, args, callId);
   if (path.endsWith("/api/agent/pharmacy-info")) return pharmacyInfo(supabase);
+  if (path.endsWith("/api/agent/retell-webhook")) return retellWebhook(supabase, wrapper);
   return json({ error: "unknown_tool" }, 404);
 }

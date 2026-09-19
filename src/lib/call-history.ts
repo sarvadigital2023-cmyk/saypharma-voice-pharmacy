@@ -137,6 +137,48 @@ async function fetchRetellTranscriptText(callId: string): Promise<string | null>
   return null;
 }
 
+// Labels the Retell webhook writes while the call is in progress (see
+// agent-api.ts). Parsing them back gives the panel proper speaker roles.
+const LIVE_AGENT_LABEL = "Оператор";
+
+/**
+ * Live transcript for the in-call panel.
+ *
+ * Retell pushes "transcript_updated" webhooks to /api/agent/retell-webhook while
+ * the call is running and that keeps one row per call up to date, so the browser
+ * only has to read our own table. No held connections, no secrets in the client
+ * — which is what makes this work on a serverless host at all.
+ */
+export const getLiveTranscript = createServerFn({ method: "POST" })
+  .inputValidator((data: { callId: string }) => ({ callId: String(data?.callId ?? "") }))
+  .handler(async ({ data }): Promise<TranscriptEntry[]> => {
+    if (!data.callId) return [];
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) return [];
+    const supabase = createClient(url, key, { auth: { persistSession: false } });
+    const { data: row } = await supabase
+      .from("call_transcripts")
+      .select("transcript")
+      .eq("call_id", data.callId)
+      .limit(1)
+      .maybeSingle();
+    const text = typeof row?.transcript === "string" ? row.transcript : "";
+    if (!text.trim()) return [];
+    return text
+      .split("\n")
+      .map((line) => {
+        const at = line.indexOf(": ");
+        if (at < 0) return { role: "user", content: line.trim() };
+        const label = line.slice(0, at);
+        return {
+          role: label === LIVE_AGENT_LABEL ? "agent" : "user",
+          content: line.slice(at + 2).trim(),
+        };
+      })
+      .filter((e) => e.content.length > 0);
+  });
+
 export const saveCallTranscript = createServerFn({ method: "POST" })
   .inputValidator((data: SaveCallInput) => ({
     phone: String(data?.phone ?? "unknown") || "unknown",
@@ -177,6 +219,33 @@ export const saveCallTranscript = createServerFn({ method: "POST" })
       const phone = data.phone !== "unknown" ? data.phone : extractPhones(transcript);
 
       const supabase = createClient(url, key, { auth: { persistSession: false } });
+      // The Retell webhook may already have created this call's row while the
+      // conversation was running — update it instead of inserting a duplicate.
+      if (data.callId) {
+        const { data: existing } = await supabase
+          .from("call_transcripts")
+          .select("id")
+          .eq("call_id", data.callId)
+          .limit(1)
+          .maybeSingle();
+        if (existing?.id) {
+          const { error: updateError } = await supabase
+            .from("call_transcripts")
+            .update({
+              phone,
+              transcript: transcript || null,
+              duration_sec: data.durationSec,
+              status: data.status,
+              agent_name: data.agentName,
+            })
+            .eq("id", existing.id);
+          if (updateError) {
+            console.error("saveCallTranscript update failed:", updateError.message);
+            return { ok: false, reason: "db_error", entries };
+          }
+          return { ok: true, entries };
+        }
+      }
       const { error } = await supabase.from("call_transcripts").insert({
         phone,
         transcript: transcript || null,
