@@ -2,28 +2,48 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RetellWebClient } from "retell-client-js-sdk";
 
 import { createWebCall } from "./retell";
-import { saveCallTranscript, formatTranscriptText, extractPhones } from "./call-history";
+import {
+  saveCallTranscript,
+  getCallTranscript,
+  formatTranscriptText,
+  extractPhones,
+} from "./call-history";
 import { useI18n } from "@/i18n";
 
 export type VoiceStatus = "idle" | "connecting" | "live" | "error";
 export type VoiceError = "not-configured" | "mic" | "failed" | null;
 export type TranscriptEntry = { role: string; content: string };
 
-/** The Retell "update" event carries the transcript so far. */
-function parseTranscript(payload: unknown): TranscriptEntry[] | null {
-  const list = (payload as { transcript?: unknown } | null)?.transcript;
+type Utterance = TranscriptEntry & { id: string; time: number };
+
+/**
+ * Utterances carried by a Retell "update" event.
+ *
+ * IMPORTANT: this array is a WINDOW of the conversation, not a full snapshot.
+ * Retell's own SDK keeps a TranscriptStore that merges each batch by utterance
+ * id and re-sorts by time. Replacing our copy with the latest batch (what we did
+ * before) silently dropped everything outside that window — which is why the
+ * transcript was always truncated, long before v3.
+ *
+ * Only speech is kept: v3 also mixes tool_call_invocation / tool_call_result /
+ * node_transition / dtmf entries into the same array, and those must never be
+ * shown or stored as something a person said.
+ */
+function parseUtterances(payload: unknown): Utterance[] | null {
+  const p = payload as Record<string, unknown> | null;
+  const list = p?.transcript ?? p?.transcript_object ?? p?.transcripts;
   if (!Array.isArray(list)) return null;
-  return (
-    list
-      .map((m) => ({
-        role: String((m as { role?: unknown })?.role ?? ""),
-        content: String((m as { content?: unknown })?.content ?? ""),
-      }))
-      // v3 mixes tool_call_invocation / tool_call_result / node_transition / dtmf
-      // entries into the transcript array. Keep only real speech, otherwise tool
-      // output is stored (and shown) as if the customer had said it.
-      .filter((m) => (m.role === "agent" || m.role === "user") && m.content.trim().length > 0)
-  );
+  const out: Utterance[] = [];
+  list.forEach((m, i) => {
+    const u = m as Record<string, unknown>;
+    const role = String(u?.role ?? "");
+    const content = String(u?.content ?? "");
+    if ((role !== "agent" && role !== "user") || content.trim().length === 0) return;
+    const parsedTime = Number(u?.time_sec);
+    const time = Number.isFinite(parsedTime) ? parsedTime : i;
+    out.push({ id: String(u?.id ?? `${role}@${time}#${i}`), time, role, content });
+  });
+  return out;
 }
 
 /** Completeness of a transcript = total characters of speech. Used to keep the
@@ -39,6 +59,9 @@ function transcriptChars(entries: TranscriptEntry[]): number {
 // 5s and end the call at 10s so the call never bills while nobody is talking.
 const SILENCE_WARN_MS = 5_000;
 const SILENCE_HANGUP_MS = 10_000;
+
+// How often the live transcript is refreshed from Retell during a call.
+const TRANSCRIPT_POLL_MS = 4_000;
 
 /**
  * Drives a Retell web voice call (agent "Cimo").
@@ -86,6 +109,11 @@ export function useVoiceAgent() {
   const sawUserSignalRef = useRef(false);
   // stable self-reference so the hangup timer can re-arm itself
   const bumpRef = useRef<() => void>(() => {});
+  // Accumulated utterances keyed by id — merged, never replaced (see
+  // parseUtterances). `seq` preserves arrival order for equal timestamps.
+  const utterancesRef = useRef(new Map<string, Utterance & { seq: number }>());
+  const seqRef = useRef(0);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const labelsRef = useRef({ agent: "Operator", user: "You" });
   labelsRef.current = { agent: t("transcript.roleAgent"), user: t("transcript.roleUser") };
 
@@ -120,6 +148,58 @@ export function useVoiceAgent() {
       },
     }).catch((e) => console.error("save transcript failed:", e));
   }, []);
+
+  /** Adopt a transcript only when it is at least as complete as what we hold, so
+   * the conversation on screen and in the database never shrinks. */
+  const applyTranscript = useCallback((entries: TranscriptEntry[]) => {
+    if (transcriptChars(entries) < transcriptChars(transcriptRef.current)) return;
+    transcriptRef.current = entries;
+    setTranscript(entries);
+  }, []);
+
+  /** Merge a batch of utterances by id (same semantics as the SDK's own
+   * TranscriptStore) and rebuild the conversation in time order. */
+  const mergeUtterances = useCallback(
+    (list: Utterance[]) => {
+      const map = utterancesRef.current;
+      for (const u of list) {
+        const prev = map.get(u.id);
+        map.set(u.id, { ...u, seq: prev?.seq ?? seqRef.current++ });
+      }
+      applyTranscript(
+        Array.from(map.values())
+          .sort((a, b) => a.time - b.time || a.seq - b.seq)
+          .map(({ role, content }) => ({ role, content })),
+      );
+    },
+    [applyTranscript],
+  );
+
+  const stopTranscriptPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  /** Poll Retell for the authoritative transcript while the call is live. The
+   * SDK's "update" events are not a dependable source (they can be absent
+   * entirely on the v3 "gateway" transport), so the on-screen panel would stay
+   * empty. Retell always has the full conversation. */
+  const startTranscriptPolling = useCallback(() => {
+    stopTranscriptPolling();
+    pollTimerRef.current = setInterval(() => {
+      const id = callIdRef.current;
+      if (!id) return;
+      void getCallTranscript({ data: { callId: id } })
+        .then((entries) => {
+          if (entries.length > 0) applyTranscript(entries);
+        })
+        .catch(() => {
+          /* transient — the next tick retries */
+        });
+    }, TRANSCRIPT_POLL_MS);
+  }, [applyTranscript, stopTranscriptPolling]);
 
   const clearSilenceTimers = useCallback(() => {
     if (warnTimerRef.current) {
@@ -184,9 +264,11 @@ export function useVoiceAgent() {
       callStartRef.current = Date.now();
       setStatus("live");
       bumpSilenceTimers();
+      startTranscriptPolling();
     });
     client.on("call_ended", () => {
       clearSilenceTimers();
+      stopTranscriptPolling();
       setSilenceWarning(false);
       saveCall(silenceEndedRef.current ? "missed" : "completed");
       silenceEndedRef.current = false;
@@ -195,6 +277,7 @@ export function useVoiceAgent() {
     client.on("error", (e: unknown) => {
       console.error("Retell call error:", e);
       clearSilenceTimers();
+      stopTranscriptPolling();
       setSilenceWarning(false);
       setError("failed");
       setStatus("error");
@@ -213,16 +296,10 @@ export function useVoiceAgent() {
       // the only proof that customer speech is observable on this call
       sawUserSignalRef.current = true;
       bumpSilenceTimers();
-      const entries = parseTranscript(payload);
-      if (!entries) return;
-      // Keep the MOST COMPLETE transcript we've seen. Retell sometimes sends a
-      // shorter/partial "update"; overwriting with it lost the start of the call.
-      // Only adopt an incoming transcript when it has at least as much speech as
-      // what we already hold, so the stored conversation never shrinks.
-      if (transcriptChars(entries) >= transcriptChars(transcriptRef.current)) {
-        transcriptRef.current = entries;
-        setTranscript(entries);
-      }
+      const batch = parseUtterances(payload);
+      if (!batch) return;
+      // MERGE by utterance id — this batch is a window, not the whole call.
+      mergeUtterances(batch);
     });
     // Pause the watchdog for the WHOLE duration of the agent's speech, not just
     // at its start: stop the countdown when the agent begins talking and only
@@ -239,7 +316,14 @@ export function useVoiceAgent() {
     });
     clientRef.current = client;
     return client;
-  }, [bumpSilenceTimers, clearSilenceTimers, saveCall]);
+  }, [
+    bumpSilenceTimers,
+    clearSilenceTimers,
+    saveCall,
+    mergeUtterances,
+    startTranscriptPolling,
+    stopTranscriptPolling,
+  ]);
 
   const start = useCallback(async () => {
     setError(null);
@@ -253,6 +337,9 @@ export function useVoiceAgent() {
     silenceEndedRef.current = false;
     agentTalkingRef.current = false;
     sawUserSignalRef.current = false;
+    utterancesRef.current = new Map();
+    seqRef.current = 0;
+    stopTranscriptPolling();
     setStatus("connecting");
     try {
       const client = await ensureClient();
@@ -288,10 +375,11 @@ export function useVoiceAgent() {
       else setError("failed");
       setStatus("error");
     }
-  }, [ensureClient]);
+  }, [ensureClient, stopTranscriptPolling]);
 
   const stop = useCallback(() => {
     clearSilenceTimers();
+    stopTranscriptPolling();
     setSilenceWarning(false);
     try {
       clientRef.current?.stopCall();
@@ -299,18 +387,19 @@ export function useVoiceAgent() {
       /* ignore */
     }
     setStatus("idle");
-  }, [clearSilenceTimers]);
+  }, [clearSilenceTimers, stopTranscriptPolling]);
 
   useEffect(
     () => () => {
       clearSilenceTimers();
+      stopTranscriptPolling();
       try {
         clientRef.current?.stopCall();
       } catch {
         /* ignore */
       }
     },
-    [clearSilenceTimers],
+    [clearSilenceTimers, stopTranscriptPolling],
   );
 
   return {

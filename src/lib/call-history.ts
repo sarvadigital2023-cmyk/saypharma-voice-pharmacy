@@ -64,11 +64,9 @@ export type SaveCallInput = {
  * real transcript, so when the client has none we ask the API directly with the
  * server-side key. Best effort — returns null on any failure.
  */
-async function fetchRetellTranscript(
+async function retellCall(
   callId: string,
-  agentLabel: string,
-  userLabel: string,
-): Promise<string | null> {
+): Promise<{ transcript?: unknown; transcript_object?: unknown } | null> {
   const apiKey = process.env.RETELL_API_KEY;
   if (!apiKey) return null;
   // try v3 first, fall back to v2 (only create-web-call was deprecated)
@@ -79,29 +77,63 @@ async function fetchRetellTranscript(
         signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) continue;
-      const call = (await res.json()) as {
-        transcript?: unknown;
-        transcript_object?: Array<{ role?: unknown; content?: unknown }>;
-      };
-      const list = call.transcript_object;
-      if (Array.isArray(list) && list.length > 0) {
-        // v3 mixes tool calls / node transitions into the transcript — keep speech
-        const text = list
-          .filter((u) => u?.role === "agent" || u?.role === "user")
-          .map((u) => `${u.role === "agent" ? agentLabel : userLabel}: ${String(u.content ?? "")}`)
-          .filter((line) => line.split(": ").slice(1).join(": ").trim().length > 0)
-          .join("\n");
-        if (text.trim().length > 0) return text;
-      }
-      if (typeof call.transcript === "string" && call.transcript.trim().length > 0) {
-        return call.transcript;
-      }
+      return (await res.json()) as { transcript?: unknown; transcript_object?: unknown };
     } catch {
       /* try the next version / give up */
     }
   }
   return null;
 }
+
+/** Speech utterances only. v3 mixes tool_call_invocation / tool_call_result /
+ * node_transition / dtmf entries into the same array — those must never show up
+ * as something the customer or the agent said. */
+function toEntries(transcriptObject: unknown): TranscriptEntry[] {
+  if (!Array.isArray(transcriptObject)) return [];
+  return transcriptObject
+    .map((u) => ({
+      role: String((u as { role?: unknown })?.role ?? ""),
+      content: String((u as { content?: unknown })?.content ?? ""),
+    }))
+    .filter((u) => (u.role === "agent" || u.role === "user") && u.content.trim().length > 0);
+}
+
+/** Structured transcript for a call, straight from Retell. */
+async function fetchRetellEntries(callId: string): Promise<TranscriptEntry[]> {
+  const call = await retellCall(callId);
+  return call ? toEntries(call.transcript_object) : [];
+}
+
+async function fetchRetellTranscript(
+  callId: string,
+  agentLabel: string,
+  userLabel: string,
+): Promise<string | null> {
+  const call = await retellCall(callId);
+  if (!call) return null;
+  const entries = toEntries(call.transcript_object);
+  if (entries.length > 0) return formatTranscriptText(entries, agentLabel, userLabel);
+  if (typeof call.transcript === "string" && call.transcript.trim().length > 0) {
+    return call.transcript;
+  }
+  return null;
+}
+
+/**
+ * Live transcript for an in-progress call, polled by the browser.
+ *
+ * The in-app transcript panel used to rely purely on the SDK's "update" events.
+ * Those are unreliable (see above) and only ever carry a window of the
+ * conversation, so the panel was empty on v3 and truncated before it. Retell
+ * itself always has the full, authoritative transcript, so we read it from the
+ * server with the secret key and hand the browser just the text.
+ */
+export const getCallTranscript = createServerFn({ method: "POST" })
+  .inputValidator((data: { callId: string }) => ({ callId: String(data?.callId ?? "") }))
+  .handler(async ({ data }): Promise<TranscriptEntry[]> => {
+    if (!data.callId) return [];
+    return fetchRetellEntries(data.callId);
+  });
 
 export const saveCallTranscript = createServerFn({ method: "POST" })
   .inputValidator((data: SaveCallInput) => ({
@@ -122,12 +154,20 @@ export const saveCallTranscript = createServerFn({ method: "POST" })
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) return { ok: false, reason: "not_configured" };
 
-    // The browser may have captured nothing (see fetchRetellTranscript) — in that
-    // case get the real transcript from Retell before writing the row.
+    // Always compare against Retell's own copy and keep the fuller one. The
+    // browser only ever sees a window of the conversation (and on v3 sometimes
+    // nothing at all), so trusting it is what produced truncated — or empty —
+    // transcripts. Retell has the whole call.
     let transcript = data.transcript;
-    if (transcript.trim().length === 0 && data.callId) {
-      transcript =
-        (await fetchRetellTranscript(data.callId, data.agentLabel, data.userLabel)) ?? "";
+    if (data.callId) {
+      const authoritative = await fetchRetellTranscript(
+        data.callId,
+        data.agentLabel,
+        data.userLabel,
+      );
+      if (authoritative && authoritative.trim().length > transcript.trim().length) {
+        transcript = authoritative;
+      }
     }
     const phone = data.phone !== "unknown" ? data.phone : extractPhones(transcript);
 
