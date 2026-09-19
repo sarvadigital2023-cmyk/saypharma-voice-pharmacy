@@ -534,22 +534,26 @@ async function retellWebhook(supabase: SupabaseClient, body: Record<string, unkn
       .update({ transcript: text })
       .eq("id", existing.id);
     if (error) {
-      console.error("webhook transcript update failed:", error.message);
-      return json({ ok: false, reason: "db_error" }, 500);
+      console.error(`webhook transcript update failed (${error.code ?? "?"}):`, error.message);
+      return json({ ok: false, reason: "db_error", detail: error.message }, 500);
     }
     return json({ ok: true, event, updated: true });
   }
 
+  // status is constrained to 'completed' | 'missed' | 'failed'
+  // (call_transcripts_status_check) — there is no "in progress" value, and
+  // inventing one made every webhook insert fail with a CHECK violation. The
+  // end-of-call save sets the real final status on this same row.
   const { error } = await supabase.from("call_transcripts").insert({
     phone: "unknown",
     transcript: text,
-    status: event === "call_ended" || event === "call_analyzed" ? "completed" : "ongoing",
+    status: "completed",
     agent_name: "Cimo",
     call_id: callId,
   });
   if (error) {
-    console.error("webhook transcript insert failed:", error.message);
-    return json({ ok: false, reason: "db_error" }, 500);
+    console.error(`webhook transcript insert failed (${error.code ?? "?"}):`, error.message);
+    return json({ ok: false, reason: "db_error", detail: error.message }, 500);
   }
   return json({ ok: true, event, created: true });
 }
