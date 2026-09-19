@@ -121,6 +121,7 @@ export function useVoiceAgent() {
   // parseUtterances). `seq` preserves arrival order for equal timestamps.
   const utterancesRef = useRef(new Map<string, Utterance & { seq: number }>());
   const seqRef = useRef(0);
+  const liveStreamRef = useRef<EventSource | null>(null);
   const labelsRef = useRef({ agent: "Operator", user: "You" });
   labelsRef.current = { agent: t("transcript.roleAgent"), user: t("transcript.roleUser") };
 
@@ -191,6 +192,71 @@ export function useVoiceAgent() {
     [applyTranscript],
   );
 
+  const stopLiveTranscript = useCallback(() => {
+    liveStreamRef.current?.close();
+    liveStreamRef.current = null;
+  }, []);
+
+  /**
+   * Subscribe to the server's live-transcript bridge.
+   *
+   * The SDK data channel cannot deliver the transcript on this account (gateway
+   * transport), so the server relays Retell's monitor socket to us over SSE.
+   * Purely additive: if it never connects, the transcript is still recovered
+   * from Retell once the call ends, exactly as before.
+   */
+  const startLiveTranscript = useCallback(
+    (callId: string) => {
+      stopLiveTranscript();
+      if (typeof EventSource === "undefined") return;
+      try {
+        const es = new EventSource(`/api/transcript-stream?callId=${encodeURIComponent(callId)}`);
+        liveStreamRef.current = es;
+        es.onmessage = (ev) => {
+          try {
+            const msg = JSON.parse(ev.data) as {
+              entries?: Array<{ role: string; content: string; id?: string; time_sec?: number }>;
+              ended?: boolean;
+              error?: string;
+            };
+            if (msg.error) {
+              console.warn("live transcript stream:", msg.error);
+              return;
+            }
+            if (msg.ended) {
+              stopLiveTranscript();
+              return;
+            }
+            if (!msg.entries?.length) return;
+            // Merge by id like every other transcript source, so snapshots and
+            // incremental updates both land correctly.
+            mergeUtterances(
+              msg.entries.map((u, i) => {
+                const time = Number.isFinite(Number(u.time_sec)) ? Number(u.time_sec) : i;
+                return {
+                  id: u.id ?? `${u.role}@${time}#${i}`,
+                  time,
+                  role: u.role,
+                  content: u.content,
+                };
+              }),
+            );
+          } catch {
+            /* ignore a malformed frame; the next snapshot resynchronises */
+          }
+        };
+        // EventSource reconnects on its own when the serverless function hits
+        // its time limit; Retell replays a full snapshot on connect.
+        es.onerror = () => {
+          /* handled by EventSource's own retry */
+        };
+      } catch (e) {
+        console.warn("live transcript stream unavailable:", e);
+      }
+    },
+    [mergeUtterances, stopLiveTranscript],
+  );
+
   const clearSilenceTimers = useCallback(() => {
     if (warnTimerRef.current) {
       clearTimeout(warnTimerRef.current);
@@ -254,9 +320,11 @@ export function useVoiceAgent() {
       callStartRef.current = Date.now();
       setStatus("live");
       bumpSilenceTimers();
+      if (callIdRef.current) startLiveTranscript(callIdRef.current);
     });
     client.on("call_ended", () => {
       clearSilenceTimers();
+      stopLiveTranscript();
       setSilenceWarning(false);
       if (!sawUserSignalRef.current) {
         // Unambiguous signal that the data channel delivered nothing: the live
@@ -273,6 +341,7 @@ export function useVoiceAgent() {
     client.on("error", (e: unknown) => {
       console.error("Retell call error:", e);
       clearSilenceTimers();
+      stopLiveTranscript();
       setSilenceWarning(false);
       setError("failed");
       setStatus("error");
@@ -311,7 +380,14 @@ export function useVoiceAgent() {
     });
     clientRef.current = client;
     return client;
-  }, [bumpSilenceTimers, clearSilenceTimers, saveCall, mergeUtterances]);
+  }, [
+    bumpSilenceTimers,
+    clearSilenceTimers,
+    saveCall,
+    mergeUtterances,
+    startLiveTranscript,
+    stopLiveTranscript,
+  ]);
 
   const start = useCallback(async () => {
     setError(null);
@@ -327,6 +403,7 @@ export function useVoiceAgent() {
     sawUserSignalRef.current = false;
     utterancesRef.current = new Map();
     seqRef.current = 0;
+    stopLiveTranscript();
     setStatus("connecting");
     try {
       const client = await ensureClient();
@@ -371,10 +448,11 @@ export function useVoiceAgent() {
       else setError("failed");
       setStatus("error");
     }
-  }, [ensureClient]);
+  }, [ensureClient, stopLiveTranscript]);
 
   const stop = useCallback(() => {
     clearSilenceTimers();
+    stopLiveTranscript();
     setSilenceWarning(false);
     try {
       clientRef.current?.stopCall();
@@ -382,18 +460,19 @@ export function useVoiceAgent() {
       /* ignore */
     }
     setStatus("idle");
-  }, [clearSilenceTimers]);
+  }, [clearSilenceTimers, stopLiveTranscript]);
 
   useEffect(
     () => () => {
       clearSilenceTimers();
+      stopLiveTranscript();
       try {
         clientRef.current?.stopCall();
       } catch {
         /* ignore */
       }
     },
-    [clearSilenceTimers],
+    [clearSilenceTimers, stopLiveTranscript],
   );
 
   return {

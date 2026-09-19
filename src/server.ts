@@ -43,6 +43,20 @@ export default {
     // of the framework's route discovery. Everything else falls through to the
     // TanStack app below.
     const url = new URL(request.url);
+    // Live transcript bridge (Retell monitor socket -> SSE). Kept out of the
+    // agent tool-call branch because it streams instead of returning JSON.
+    if (url.pathname === "/api/transcript-stream") {
+      try {
+        const { handleTranscriptStream } = await import("./server/transcript-stream");
+        return await handleTranscriptStream(request, url);
+      } catch (error) {
+        console.error(error);
+        return new Response(JSON.stringify({ error: "transcript_stream_error" }), {
+          status: 500,
+          headers: { "content-type": "application/json; charset=utf-8" },
+        });
+      }
+    }
     if (url.pathname.startsWith("/api/agent/")) {
       try {
         const { handleAgentApi } = await import("./server/agent-api");
