@@ -72,6 +72,13 @@ export const createWebCall = createServerFn({ method: "POST" }).handler(async ()
     console.error("Retell create-web-call returned no access token");
     throw new Error("RETELL_CALL_FAILED:no_access_token");
   }
+  // Which transport v3 negotiated decides whether live transcript events can
+  // reach the browser at all — log it server-side so it shows up in the
+  // deployment logs without needing the customer's browser console.
+  console.info(
+    `Retell v3 web call ${result.call_id ?? "?"}: transport=${result.transport ?? "(unset)"} ` +
+      `url=${result.url ? "yes" : "no"} ice_servers=${result.ice_servers?.length ?? 0}`,
+  );
   return {
     accessToken: result.access_token,
     callId: result.call_id ?? null,

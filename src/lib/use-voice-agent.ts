@@ -56,6 +56,20 @@ const SILENCE_WARN_MS = 5_000;
 const SILENCE_HANGUP_MS = 10_000;
 
 /**
+ * Ask Retell for the LiveKit transport instead of whatever v3 negotiates.
+ *
+ * Live transcript reaches the browser over the SDK's data channel. LiveKit's
+ * implementation is byte-for-byte the one that worked before v3 (it filters on
+ * `identity === "server"` and forwards every event). The v3 "gateway" transport
+ * carries audio fine, but parses its data channel as `JSON.parse(e.data)` inside
+ * an EMPTY catch — anything unexpected is dropped silently, so no "update" ever
+ * arrives and the panel stays empty until the call ends.
+ *
+ * Flip to false to use exactly what Retell negotiates.
+ */
+const PREFER_LIVEKIT_TRANSPORT = true;
+
+/**
  * Drives a Retell web voice call (agent "Cimo").
  *
  * start(): mints a token via the server fn, then opens the WebRTC call with
@@ -242,6 +256,14 @@ export function useVoiceAgent() {
     client.on("call_ended", () => {
       clearSilenceTimers();
       setSilenceWarning(false);
+      if (!sawUserSignalRef.current) {
+        // Unambiguous signal that the data channel delivered nothing: the live
+        // panel could only have been filled from Retell after the call.
+        console.warn(
+          "No transcript 'update' events arrived during this call — the SDK data " +
+            "channel delivered nothing, so live transcript was unavailable.",
+        );
+      }
       saveCall(silenceEndedRef.current ? "missed" : "completed");
       silenceEndedRef.current = false;
       setStatus("idle");
@@ -315,15 +337,24 @@ export function useVoiceAgent() {
         hasUrl: Boolean(call.url),
         iceServers: call.iceServers?.length ?? 0,
       });
-      // Forward the full v3 connection info. For the "gateway" transport the SDK
-      // needs transport/url/iceServers to reach the call; for "livekit" they are
-      // absent and the SDK uses its defaults. Passing undefined is fine.
+      // Pick the transport (see PREFER_LIVEKIT_TRANSPORT). url/iceServers belong
+      // to the transport Retell negotiated, so they are only forwarded when we
+      // actually use that one — a gateway url would point LiveKit at the wrong
+      // host and the call would not connect at all.
+      const negotiated = call.transport ?? "livekit";
+      const transport = PREFER_LIVEKIT_TRANSPORT ? "livekit" : negotiated;
+      const sameAsNegotiated = transport === negotiated;
+      if (!sameAsNegotiated) {
+        console.info(
+          `Overriding Retell transport "${negotiated}" with "livekit" for live transcript`,
+        );
+      }
       await client.startCall({
         accessToken: call.accessToken,
         callId: call.callId ?? undefined,
-        transport: call.transport,
-        url: call.url,
-        iceServers: call.iceServers,
+        transport,
+        url: sameAsNegotiated ? call.url : undefined,
+        iceServers: sameAsNegotiated ? call.iceServers : undefined,
       });
     } catch (e) {
       console.error(e);
