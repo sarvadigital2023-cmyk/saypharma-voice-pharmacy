@@ -201,9 +201,18 @@ export function useVoiceAgent() {
     setStatus("connecting");
     try {
       const client = await ensureClient();
-      const { accessToken, callId } = await createWebCall();
-      callIdRef.current = callId ?? null;
-      await client.startCall({ accessToken });
+      const call = await createWebCall();
+      callIdRef.current = call.callId ?? null;
+      // Forward the full v3 connection info. For the "gateway" transport the SDK
+      // needs transport/url/iceServers to reach the call; for "livekit" they are
+      // absent and the SDK uses its defaults. Passing undefined is fine.
+      await client.startCall({
+        accessToken: call.accessToken,
+        callId: call.callId ?? undefined,
+        transport: call.transport,
+        url: call.url,
+        iceServers: call.iceServers,
+      });
     } catch (e) {
       console.error(e);
       const message = e instanceof Error ? e.message : String(e);

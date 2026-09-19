@@ -31,7 +31,9 @@ export const createWebCall = createServerFn({ method: "POST" }).handler(async ()
 
   let res: Response;
   try {
-    res = await fetch("https://api.retellai.com/v2/create-web-call", {
+    // v3 endpoint: /v2/create-web-call is deprecated (removal 2026-09-30). The
+    // request body is unchanged from v2 — only the version in the path moves.
+    res = await fetch("https://api.retellai.com/v3/create-web-call", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
@@ -52,6 +54,29 @@ export const createWebCall = createServerFn({ method: "POST" }).handler(async ()
     throw new Error(`RETELL_CALL_FAILED:${res.status}`);
   }
 
-  const result = (await res.json()) as { access_token: string; call_id: string };
-  return { accessToken: result.access_token, callId: result.call_id };
+  // v3 create-web-call returns everything the browser Web SDK needs to open the
+  // WebRTC connection. Besides the short-lived access token and the call id, the
+  // new "gateway" transport also returns the transport kind, a signaling url and
+  // the ICE servers — these MUST be forwarded to the SDK or the call connects
+  // with no audio. For the "livekit" transport they are absent and the SDK falls
+  // back to its defaults. Field names are v3's snake_case; we only forward what
+  // the SDK consumes (see StartCallConfig), nothing invented.
+  const result = (await res.json()) as {
+    access_token?: string;
+    call_id?: string;
+    transport?: "livekit" | "gateway";
+    url?: string;
+    ice_servers?: RTCIceServer[];
+  };
+  if (!result.access_token) {
+    console.error("Retell create-web-call returned no access token");
+    throw new Error("RETELL_CALL_FAILED:no_access_token");
+  }
+  return {
+    accessToken: result.access_token,
+    callId: result.call_id ?? null,
+    transport: result.transport,
+    url: result.url,
+    iceServers: result.ice_servers,
+  };
 });
