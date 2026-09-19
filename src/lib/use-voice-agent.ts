@@ -2,12 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RetellWebClient } from "retell-client-js-sdk";
 
 import { createWebCall } from "./retell";
-import {
-  saveCallTranscript,
-  getCallTranscript,
-  formatTranscriptText,
-  extractPhones,
-} from "./call-history";
+import { saveCallTranscript, formatTranscriptText, extractPhones } from "./call-history";
 import { useI18n } from "@/i18n";
 
 export type VoiceStatus = "idle" | "connecting" | "live" | "error";
@@ -60,9 +55,6 @@ function transcriptChars(entries: TranscriptEntry[]): number {
 const SILENCE_WARN_MS = 5_000;
 const SILENCE_HANGUP_MS = 10_000;
 
-// How often the live transcript is refreshed from Retell during a call.
-const TRANSCRIPT_POLL_MS = 4_000;
-
 /**
  * Drives a Retell web voice call (agent "Cimo").
  *
@@ -113,41 +105,8 @@ export function useVoiceAgent() {
   // parseUtterances). `seq` preserves arrival order for equal timestamps.
   const utterancesRef = useRef(new Map<string, Utterance & { seq: number }>());
   const seqRef = useRef(0);
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const labelsRef = useRef({ agent: "Operator", user: "You" });
   labelsRef.current = { agent: t("transcript.roleAgent"), user: t("transcript.roleUser") };
-
-  // Persist the finished call once. status: "completed" normally, "missed" when
-  // the silence watchdog ended it. Always saves a record for a connected call —
-  // the server fills in the transcript from Retell when the browser has none.
-  const saveCall = useCallback((status: "completed" | "missed") => {
-    if (savedRef.current) return;
-    // Only skip calls that never actually connected. An EMPTY transcript is not a
-    // reason to skip: the browser may simply have received no transcript events
-    // (v3 "gateway" transport), and the server then recovers the real transcript
-    // from Retell by call_id. Bailing out here is what left the admin with no
-    // record of the call at all.
-    if (callStartRef.current == null) return;
-    const entries = transcriptRef.current ?? [];
-    savedRef.current = true;
-    const text = formatTranscriptText(entries, labelsRef.current.agent, labelsRef.current.user);
-    const phone = extractPhones(text);
-    const durationSec = callStartRef.current
-      ? Math.max(1, Math.round((Date.now() - callStartRef.current) / 1000))
-      : null;
-    void saveCallTranscript({
-      data: {
-        phone,
-        transcript: text,
-        durationSec,
-        status,
-        agentName: "Cimo",
-        callId: callIdRef.current,
-        agentLabel: labelsRef.current.agent,
-        userLabel: labelsRef.current.user,
-      },
-    }).catch((e) => console.error("save transcript failed:", e));
-  }, []);
 
   /** Adopt a transcript only when it is at least as complete as what we hold, so
    * the conversation on screen and in the database never shrinks. */
@@ -156,6 +115,47 @@ export function useVoiceAgent() {
     transcriptRef.current = entries;
     setTranscript(entries);
   }, []);
+
+  // Persist the finished call once. status: "completed" normally, "missed" when
+  // the silence watchdog ended it. Always saves a record for a connected call —
+  // the server fills in the transcript from Retell when the browser has none.
+  const saveCall = useCallback(
+    (status: "completed" | "missed") => {
+      if (savedRef.current) return;
+      // Only skip calls that never actually connected. An EMPTY transcript is not a
+      // reason to skip: the browser may simply have received no transcript events
+      // (v3 "gateway" transport), and the server then recovers the real transcript
+      // from Retell by call_id. Bailing out here is what left the admin with no
+      // record of the call at all.
+      if (callStartRef.current == null) return;
+      const entries = transcriptRef.current ?? [];
+      savedRef.current = true;
+      const text = formatTranscriptText(entries, labelsRef.current.agent, labelsRef.current.user);
+      const phone = extractPhones(text);
+      const durationSec = callStartRef.current
+        ? Math.max(1, Math.round((Date.now() - callStartRef.current) / 1000))
+        : null;
+      void saveCallTranscript({
+        data: {
+          phone,
+          transcript: text,
+          durationSec,
+          status,
+          agentName: "Cimo",
+          callId: callIdRef.current,
+          agentLabel: labelsRef.current.agent,
+          userLabel: labelsRef.current.user,
+        },
+      })
+        .then((res) => {
+          // The server fetches the authoritative transcript from Retell (which is
+          // only available once the call has ended) — show it in the panel too.
+          if (res?.entries && res.entries.length > 0) applyTranscript(res.entries);
+        })
+        .catch((e) => console.error("save transcript failed:", e));
+    },
+    [applyTranscript],
+  );
 
   /** Merge a batch of utterances by id (same semantics as the SDK's own
    * TranscriptStore) and rebuild the conversation in time order. */
@@ -174,32 +174,6 @@ export function useVoiceAgent() {
     },
     [applyTranscript],
   );
-
-  const stopTranscriptPolling = useCallback(() => {
-    if (pollTimerRef.current) {
-      clearInterval(pollTimerRef.current);
-      pollTimerRef.current = null;
-    }
-  }, []);
-
-  /** Poll Retell for the authoritative transcript while the call is live. The
-   * SDK's "update" events are not a dependable source (they can be absent
-   * entirely on the v3 "gateway" transport), so the on-screen panel would stay
-   * empty. Retell always has the full conversation. */
-  const startTranscriptPolling = useCallback(() => {
-    stopTranscriptPolling();
-    pollTimerRef.current = setInterval(() => {
-      const id = callIdRef.current;
-      if (!id) return;
-      void getCallTranscript({ data: { callId: id } })
-        .then((entries) => {
-          if (entries.length > 0) applyTranscript(entries);
-        })
-        .catch(() => {
-          /* transient — the next tick retries */
-        });
-    }, TRANSCRIPT_POLL_MS);
-  }, [applyTranscript, stopTranscriptPolling]);
 
   const clearSilenceTimers = useCallback(() => {
     if (warnTimerRef.current) {
@@ -264,11 +238,9 @@ export function useVoiceAgent() {
       callStartRef.current = Date.now();
       setStatus("live");
       bumpSilenceTimers();
-      startTranscriptPolling();
     });
     client.on("call_ended", () => {
       clearSilenceTimers();
-      stopTranscriptPolling();
       setSilenceWarning(false);
       saveCall(silenceEndedRef.current ? "missed" : "completed");
       silenceEndedRef.current = false;
@@ -277,7 +249,6 @@ export function useVoiceAgent() {
     client.on("error", (e: unknown) => {
       console.error("Retell call error:", e);
       clearSilenceTimers();
-      stopTranscriptPolling();
       setSilenceWarning(false);
       setError("failed");
       setStatus("error");
@@ -316,14 +287,7 @@ export function useVoiceAgent() {
     });
     clientRef.current = client;
     return client;
-  }, [
-    bumpSilenceTimers,
-    clearSilenceTimers,
-    saveCall,
-    mergeUtterances,
-    startTranscriptPolling,
-    stopTranscriptPolling,
-  ]);
+  }, [bumpSilenceTimers, clearSilenceTimers, saveCall, mergeUtterances]);
 
   const start = useCallback(async () => {
     setError(null);
@@ -339,7 +303,6 @@ export function useVoiceAgent() {
     sawUserSignalRef.current = false;
     utterancesRef.current = new Map();
     seqRef.current = 0;
-    stopTranscriptPolling();
     setStatus("connecting");
     try {
       const client = await ensureClient();
@@ -375,11 +338,10 @@ export function useVoiceAgent() {
       else setError("failed");
       setStatus("error");
     }
-  }, [ensureClient, stopTranscriptPolling]);
+  }, [ensureClient]);
 
   const stop = useCallback(() => {
     clearSilenceTimers();
-    stopTranscriptPolling();
     setSilenceWarning(false);
     try {
       clientRef.current?.stopCall();
@@ -387,19 +349,18 @@ export function useVoiceAgent() {
       /* ignore */
     }
     setStatus("idle");
-  }, [clearSilenceTimers, stopTranscriptPolling]);
+  }, [clearSilenceTimers]);
 
   useEffect(
     () => () => {
       clearSilenceTimers();
-      stopTranscriptPolling();
       try {
         clientRef.current?.stopCall();
       } catch {
         /* ignore */
       }
     },
-    [clearSilenceTimers, stopTranscriptPolling],
+    [clearSilenceTimers],
   );
 
   return {

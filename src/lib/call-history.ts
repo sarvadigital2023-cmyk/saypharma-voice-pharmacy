@@ -61,28 +61,35 @@ export type SaveCallInput = {
  * The browser data channel is NOT a reliable source: on the v3 "gateway"
  * transport the SDK can deliver no transcript events at all (audio rides a
  * separate WebRTC track), which left us saving nothing. Retell always has the
- * real transcript, so when the client has none we ask the API directly with the
- * server-side key. Best effort — returns null on any failure.
+ * real transcript, so we ask the API directly with the server-side key.
+ *
+ * NOTE (verified against Retell's official Node SDK): "get-call" only exists as
+ * /v2/get-call/{call_id} — there is no v3 of it, only create-web-call moved to
+ * v3. And both `transcript` and `transcript_object` are documented as "Available
+ * after call ends", which is why polling during the call always came back empty.
  */
 async function retellCall(
   callId: string,
 ): Promise<{ transcript?: unknown; transcript_object?: unknown } | null> {
   const apiKey = process.env.RETELL_API_KEY;
-  if (!apiKey) return null;
-  // try v3 first, fall back to v2 (only create-web-call was deprecated)
-  for (const version of ["v3", "v2"]) {
-    try {
-      const res = await fetch(`https://api.retellai.com/${version}/get-call/${callId}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!res.ok) continue;
-      return (await res.json()) as { transcript?: unknown; transcript_object?: unknown };
-    } catch {
-      /* try the next version / give up */
-    }
+  if (!apiKey) {
+    console.error("get-call skipped: RETELL_API_KEY is not set");
+    return null;
   }
-  return null;
+  try {
+    const res = await fetch(`https://api.retellai.com/v2/get-call/${callId}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      console.error(`get-call ${callId} failed: HTTP ${res.status}`);
+      return null;
+    }
+    return (await res.json()) as { transcript?: unknown; transcript_object?: unknown };
+  } catch (e) {
+    console.error("get-call request error:", e);
+    return null;
+  }
 }
 
 /** Speech utterances only. v3 mixes tool_call_invocation / tool_call_result /
@@ -98,42 +105,37 @@ function toEntries(transcriptObject: unknown): TranscriptEntry[] {
     .filter((u) => (u.role === "agent" || u.role === "user") && u.content.trim().length > 0);
 }
 
-/** Structured transcript for a call, straight from Retell. */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Retell finalises the transcript a moment AFTER the call disconnects, so asking
+ * once at call_ended reliably came back empty and we stored NULL. Retry a few
+ * times with a short backoff until it materialises (bounded so the serverless
+ * function always returns).
+ */
 async function fetchRetellEntries(callId: string): Promise<TranscriptEntry[]> {
-  const call = await retellCall(callId);
-  return call ? toEntries(call.transcript_object) : [];
+  // kept short so the whole handler stays well inside the serverless time limit
+  const delays = [0, 1_500, 3_000];
+  for (const delay of delays) {
+    if (delay) await sleep(delay);
+    const call = await retellCall(callId);
+    if (!call) continue;
+    const entries = toEntries(call.transcript_object);
+    if (entries.length > 0) return entries;
+  }
+  console.warn(`get-call ${callId}: transcript still not available after retries`);
+  return [];
 }
 
-async function fetchRetellTranscript(
-  callId: string,
-  agentLabel: string,
-  userLabel: string,
-): Promise<string | null> {
+/** Retell's own single-string transcript — last resort when the structured list
+ * is still unavailable. One extra attempt only; the retries already happened. */
+async function fetchRetellTranscriptText(callId: string): Promise<string | null> {
   const call = await retellCall(callId);
-  if (!call) return null;
-  const entries = toEntries(call.transcript_object);
-  if (entries.length > 0) return formatTranscriptText(entries, agentLabel, userLabel);
-  if (typeof call.transcript === "string" && call.transcript.trim().length > 0) {
+  if (call && typeof call.transcript === "string" && call.transcript.trim().length > 0) {
     return call.transcript;
   }
   return null;
 }
-
-/**
- * Live transcript for an in-progress call, polled by the browser.
- *
- * The in-app transcript panel used to rely purely on the SDK's "update" events.
- * Those are unreliable (see above) and only ever carry a window of the
- * conversation, so the panel was empty on v3 and truncated before it. Retell
- * itself always has the full, authoritative transcript, so we read it from the
- * server with the secret key and hand the browser just the text.
- */
-export const getCallTranscript = createServerFn({ method: "POST" })
-  .inputValidator((data: { callId: string }) => ({ callId: String(data?.callId ?? "") }))
-  .handler(async ({ data }): Promise<TranscriptEntry[]> => {
-    if (!data.callId) return [];
-    return fetchRetellEntries(data.callId);
-  });
 
 export const saveCallTranscript = createServerFn({ method: "POST" })
   .inputValidator((data: SaveCallInput) => ({
@@ -149,41 +151,45 @@ export const saveCallTranscript = createServerFn({ method: "POST" })
     agentLabel: data?.agentLabel ?? "Operator",
     userLabel: data?.userLabel ?? "You",
   }))
-  .handler(async ({ data }): Promise<{ ok: boolean; reason?: string }> => {
-    const url = process.env.SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) return { ok: false, reason: "not_configured" };
-
-    // Always compare against Retell's own copy and keep the fuller one. The
-    // browser only ever sees a window of the conversation (and on v3 sometimes
-    // nothing at all), so trusting it is what produced truncated — or empty —
-    // transcripts. Retell has the whole call.
-    let transcript = data.transcript;
-    if (data.callId) {
-      const authoritative = await fetchRetellTranscript(
-        data.callId,
-        data.agentLabel,
-        data.userLabel,
-      );
-      if (authoritative && authoritative.trim().length > transcript.trim().length) {
-        transcript = authoritative;
+  .handler(
+    async ({ data }): Promise<{ ok: boolean; reason?: string; entries?: TranscriptEntry[] }> => {
+      // Always compare against Retell's own copy and keep the fuller one. The
+      // browser only ever sees a window of the conversation (and on v3 sometimes
+      // nothing at all), so trusting it is what produced truncated — or empty —
+      // transcripts. Retell has the whole call. Done before the env check so the
+      // caller still gets the transcript for the on-screen panel.
+      let transcript = data.transcript;
+      let entries: TranscriptEntry[] = [];
+      if (data.callId) {
+        entries = await fetchRetellEntries(data.callId);
+        const authoritative =
+          entries.length > 0
+            ? formatTranscriptText(entries, data.agentLabel, data.userLabel)
+            : await fetchRetellTranscriptText(data.callId);
+        if (authoritative && authoritative.trim().length > transcript.trim().length) {
+          transcript = authoritative;
+        }
       }
-    }
-    const phone = data.phone !== "unknown" ? data.phone : extractPhones(transcript);
 
-    const supabase = createClient(url, key, { auth: { persistSession: false } });
-    const { error } = await supabase.from("call_transcripts").insert({
-      phone,
-      transcript: transcript || null,
-      duration_sec: data.durationSec,
-      status: data.status,
-      agent_name: data.agentName,
-      call_id: data.callId,
-      // order_id and summary intentionally left null for now
-    });
-    if (error) {
-      console.error("saveCallTranscript failed:", error.message);
-      return { ok: false, reason: "db_error" };
-    }
-    return { ok: true };
-  });
+      const url = process.env.SUPABASE_URL;
+      const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!url || !key) return { ok: false, reason: "not_configured", entries };
+      const phone = data.phone !== "unknown" ? data.phone : extractPhones(transcript);
+
+      const supabase = createClient(url, key, { auth: { persistSession: false } });
+      const { error } = await supabase.from("call_transcripts").insert({
+        phone,
+        transcript: transcript || null,
+        duration_sec: data.durationSec,
+        status: data.status,
+        agent_name: data.agentName,
+        call_id: data.callId,
+        // order_id and summary intentionally left null for now
+      });
+      if (error) {
+        console.error("saveCallTranscript failed:", error.message);
+        return { ok: false, reason: "db_error", entries };
+      }
+      return { ok: true, entries };
+    },
+  );
