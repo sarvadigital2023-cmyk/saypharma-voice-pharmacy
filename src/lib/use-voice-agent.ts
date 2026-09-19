@@ -69,6 +69,15 @@ export function useVoiceAgent() {
   // then, otherwise a single long reply (e.g. dictating an order number) is
   // mistaken for silence and the call is cut off while the agent is speaking.
   const agentTalkingRef = useRef(false);
+  // Has the SDK delivered ANY server event on this call? The watchdog infers
+  // "silence" from the ABSENCE of server events, so it can only do that safely
+  // when the event channel is known to work. On the v3 "gateway" transport the
+  // data channel can stay silent (its JSON parse errors are swallowed by the
+  // SDK) while audio still flows — then every call looks silent and gets killed
+  // seconds after the greeting. Fail open: no events seen => never auto-hang-up.
+  const sawServerEventRef = useRef(false);
+  // stable self-reference so the hangup timer can re-arm itself
+  const bumpRef = useRef<() => void>(() => {});
   const labelsRef = useRef({ agent: "Operator", user: "You" });
   labelsRef.current = { agent: t("transcript.roleAgent"), user: t("transcript.roleUser") };
 
@@ -114,8 +123,29 @@ export function useVoiceAgent() {
     // While the agent is speaking, the call is clearly alive — do not arm the
     // watchdog (a stray "update" during a long reply must not restart it).
     if (agentTalkingRef.current) return;
-    warnTimerRef.current = setTimeout(() => setSilenceWarning(true), SILENCE_WARN_MS);
+    warnTimerRef.current = setTimeout(() => {
+      // don't raise a silence alarm we would never act on (see hangup guard)
+      if (!sawServerEventRef.current) return;
+      setSilenceWarning(true);
+    }, SILENCE_WARN_MS);
     hangupTimerRef.current = setTimeout(() => {
+      // Belt and braces before ending a live call:
+      // 1) the agent may have started talking between the last bump and now —
+      //    ask the SDK directly, not just our own flag;
+      // 2) if no server event EVER arrived we cannot tell real silence from a
+      //    dead event channel, so we must not hang up (fail open).
+      if (agentTalkingRef.current || clientRef.current?.isAgentTalking) {
+        bumpRef.current();
+        return;
+      }
+      if (!sawServerEventRef.current) {
+        console.warn(
+          "Silence watchdog: no server events received on this call — not hanging up (event channel may be unavailable).",
+        );
+        clearSilenceTimers();
+        setSilenceWarning(false);
+        return;
+      }
       clearSilenceTimers();
       setSilenceWarning(false);
       silenceEndedRef.current = true; // mark this end as "missed" for call_ended
@@ -127,6 +157,7 @@ export function useVoiceAgent() {
       setStatus("idle");
     }, SILENCE_HANGUP_MS);
   }, [clearSilenceTimers]);
+  bumpRef.current = bumpSilenceTimers;
 
   const ensureClient = useCallback(async () => {
     if (clientRef.current) return clientRef.current;
@@ -156,9 +187,17 @@ export function useVoiceAgent() {
         /* ignore */
       }
     });
+    // Any server event proves the event channel is alive AND that the call is
+    // active, so it both unlocks the watchdog and resets it.
+    const onServerActivity = () => {
+      sawServerEventRef.current = true;
+      bumpSilenceTimers();
+    };
+    client.on("metadata", onServerActivity);
+    client.on("node_transition", onServerActivity);
     // live transcript + activity reset (the "update" event carries the transcript)
     client.on("update", (payload: unknown) => {
-      bumpSilenceTimers();
+      onServerActivity();
       const entries = parseTranscript(payload);
       if (!entries) return;
       // Keep the MOST COMPLETE transcript we've seen. Retell sometimes sends a
@@ -175,11 +214,13 @@ export function useVoiceAgent() {
     // resume it once the agent has finished. This is what prevents the call from
     // being cut off mid-reply (e.g. while dictating the order number).
     client.on("agent_start_talking", () => {
+      sawServerEventRef.current = true;
       agentTalkingRef.current = true;
       clearSilenceTimers();
       setSilenceWarning(false);
     });
     client.on("agent_stop_talking", () => {
+      sawServerEventRef.current = true;
       agentTalkingRef.current = false;
       bumpSilenceTimers();
     });
@@ -198,11 +239,19 @@ export function useVoiceAgent() {
     savedRef.current = false;
     silenceEndedRef.current = false;
     agentTalkingRef.current = false;
+    sawServerEventRef.current = false;
     setStatus("connecting");
     try {
       const client = await ensureClient();
       const call = await createWebCall();
       callIdRef.current = call.callId ?? null;
+      // Which transport v3 handed us decides whether the server-event channel
+      // works; log it so a broken call can be diagnosed from the console.
+      console.info("Retell web call:", {
+        transport: call.transport ?? "(default: livekit)",
+        hasUrl: Boolean(call.url),
+        iceServers: call.iceServers?.length ?? 0,
+      });
       // Forward the full v3 connection info. For the "gateway" transport the SDK
       // needs transport/url/iceServers to reach the call; for "livekit" they are
       // absent and the SDK uses its defaults. Passing undefined is fine.
