@@ -65,9 +65,11 @@ const SILENCE_HANGUP_MS = 10_000;
  * an EMPTY catch — anything unexpected is dropped silently, so no "update" ever
  * arrives and the panel stays empty until the call ends.
  *
- * Flip to false to use exactly what Retell negotiates.
+ * CONFIRMED IN PRODUCTION: this account is issued gateway-only tokens — forcing
+ * "livekit" made calls fail to connect entirely. Must stay false. Live
+ * transcript therefore cannot come from the SDK data channel on this account.
  */
-const PREFER_LIVEKIT_TRANSPORT = true;
+const PREFER_LIVEKIT_TRANSPORT = false;
 
 /**
  * Drives a Retell web voice call (agent "Cimo").
