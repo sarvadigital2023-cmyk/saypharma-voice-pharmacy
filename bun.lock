@@ -14,7 +14,7 @@
         "lucide-react": "^0.575.0",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
-        "retell-client-js-sdk": "^2.0.8",
+        "retell-client-js-sdk": "^3.0.1",
         "tailwindcss": "^4.2.1",
         "tw-animate-css": "^1.3.4",
         "vite-tsconfig-paths": "^6.0.2",
@@ -815,7 +815,7 @@
 
     "resolve-pkg-maps": ["resolve-pkg-maps@1.0.0", "", {}, "sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw=="],
 
-    "retell-client-js-sdk": ["retell-client-js-sdk@2.0.8", "", { "dependencies": { "eventemitter3": "^5.0.1", "livekit-client": "^2.5.1" } }, "sha512-t6bobUwqVx0DFayN389z4HbjUxyUrn9VO3ZJPMaoGrVh3qPZbGPC8DwopYLj6UgkTwpHijFX77aaeQghLGGJ7Q=="],
+    "retell-client-js-sdk": ["retell-client-js-sdk@3.0.1", "", { "dependencies": { "eventemitter3": "^5.0.1", "livekit-client": "^2.5.1" } }, "sha512-fVUIoZU78YyqYzpxwSQvmFB2Jn2oi9Tm/v7n7gOMVkEehg0YIwwvJHg3BIUm9QpWMAqht3GAzc7rPa05orJTlA=="],
 
     "reusify": ["reusify@1.1.0", "", {}, "sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw=="],
 

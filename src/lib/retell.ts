@@ -54,21 +54,29 @@ export const createWebCall = createServerFn({ method: "POST" }).handler(async ()
     throw new Error(`RETELL_CALL_FAILED:${res.status}`);
   }
 
-  // v3 returns the same essentials as v2 — a short-lived access token and the
-  // call id. Parse tolerantly (accept snake_case or camelCase) so a minor
-  // field-name change in v3 can't silently break the call; fail loudly if the
-  // access token is missing rather than handing the SDK an undefined token.
+  // v3 create-web-call returns everything the browser Web SDK needs to open the
+  // WebRTC connection. Besides the short-lived access token and the call id, the
+  // new "gateway" transport also returns the transport kind, a signaling url and
+  // the ICE servers — these MUST be forwarded to the SDK or the call connects
+  // with no audio. For the "livekit" transport they are absent and the SDK falls
+  // back to its defaults. Field names are v3's snake_case; we only forward what
+  // the SDK consumes (see StartCallConfig), nothing invented.
   const result = (await res.json()) as {
     access_token?: string;
-    accessToken?: string;
     call_id?: string;
-    callId?: string;
+    transport?: "livekit" | "gateway";
+    url?: string;
+    ice_servers?: RTCIceServer[];
   };
-  const accessToken = result.access_token ?? result.accessToken;
-  const callId = result.call_id ?? result.callId ?? null;
-  if (!accessToken) {
+  if (!result.access_token) {
     console.error("Retell create-web-call returned no access token");
     throw new Error("RETELL_CALL_FAILED:no_access_token");
   }
-  return { accessToken, callId };
+  return {
+    accessToken: result.access_token,
+    callId: result.call_id ?? null,
+    transport: result.transport,
+    url: result.url,
+    iceServers: result.ice_servers,
+  };
 });
